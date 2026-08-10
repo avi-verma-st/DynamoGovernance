@@ -1,0 +1,305 @@
+# Architecture
+
+## Overview
+
+DynamoGovernance is a telemetry extension for Dynamo that logs user activity and usage patterns to JSONL files. The architecture follows a failsafe design pattern where logging never impacts the performance or stability of Dynamo or its host application (Revit, Civil3D, etc.).
+
+## Project Structure
+
+```
+DynamoGovernance/
+??? DynamoGovernance.Core/              # Shared business logic
+?   ??? Models/
+?   ?   ??? TelemetryEvent.cs          # Event data schema
+?   ??? Services/
+?   ?   ??? IdentityService.cs         # User/machine ID management
+?   ?   ??? TelemetryLogger.cs         # JSONL file I/O
+?   ?   ??? GovernanceService.cs       # Main API facade
+?   ??? Examples/
+?       ??? TelemetryExample.cs        # Usage examples
+?
+??? DynamoGovernance.Extension/         # Dynamo IExtension implementation
+?   ??? GovernanceTelemetryExtension.cs # Extension lifecycle hooks
+?
+??? DynamoGovernance.ViewExtension/     # Future WPF UI (placeholder)
+```
+
+## Technology Stack
+
+- **.NET 8** - Target framework
+- **Dynamo API 3.3** - Extension interface
+- **System.Text.Json** - JSON serialization
+- **SHA256** - ID hashing
+
+## Core Components
+
+### 1. TelemetryEvent (Data Model)
+
+Represents a single governance event with JSON schema v1.0:
+
+```csharp
+public class TelemetryEvent
+{
+    public string SchemaVersion { get; set; } = "1.0";
+    public Guid EventId { get; set; }
+    public Guid SessionId { get; set; }
+    public DateTime TimestampUtc { get; set; }
+    public string UserId { get; set; }
+    public string MachineId { get; set; }
+    public string HostApplication { get; set; }
+    public string DynamoVersion { get; set; }
+    public Guid? GraphId { get; set; }
+    public string Outcome { get; set; }
+    public string? ErrorDetails { get; set; }
+}
+```
+
+### 2. IdentityService (Identity Management)
+
+Provides user and machine identification with optional SHA256 hashing:
+
+```csharp
+public static class IdentityService
+{
+    public static string GetUserId()      // Returns hashed/plain user ID
+    public static string GetMachineId()   // Returns hashed/plain machine ID
+}
+```
+
+**Privacy**: IDs are hashed by default using SHA256 for privacy compliance.
+
+### 3. TelemetryLogger (File I/O)
+
+Thread-safe JSONL file writer with failsafe guarantees:
+
+```csharp
+public class TelemetryLogger
+{
+    public async Task LogAsync(TelemetryEvent evt)  // Non-blocking async
+    public void Log(TelemetryEvent evt)             // Synchronous for lifecycle
+}
+```
+
+**Key Features**:
+- SemaphoreSlim for thread safety
+- 5-second timeout on file locks
+- Daily log rotation (one file per day)
+- Silent failure (never throws exceptions)
+
+### 4. GovernanceService (API Facade)
+
+Main service orchestrating telemetry operations:
+
+```csharp
+public class GovernanceService
+{
+    public void StartSession(string version, string host)
+    public void EndSession()
+    public void LogEvent(string outcome)
+    public async Task LogEventAsync(string outcome)
+    public async Task LogGraphExecutionAsync(Guid? graphId, string outcome)
+}
+```
+
+**Idempotency**: `EndSession()` can be called multiple times safely.
+
+### 5. GovernanceTelemetryExtension (Dynamo Integration)
+
+Implements `IExtension` to hook into Dynamo lifecycle:
+
+```csharp
+public class GovernanceTelemetryExtension : IExtension
+{
+    public void Startup(StartupParams sp)   // Initialize service, start session
+    public void Ready(ReadyParams sp)       // Log extension ready
+    public void Shutdown()                  // End session
+    public void Dispose()                   // Cleanup resources
+}
+```
+
+## Data Flow
+
+```
+???????????????????????????????????????????????????????????????
+? Dynamo/Revit Application                                     ?
+???????????????????????????????????????????????????????????????
+                           ?
+                           ?
+???????????????????????????????????????????????????????????????
+? GovernanceTelemetryExtension (IExtension)                    ?
+?  • Startup()  ? StartSession()                               ?
+?  • Ready()    ? LogEvent("extension_ready")                  ?
+?  • Shutdown() ? EndSession()                                 ?
+???????????????????????????????????????????????????????????????
+                           ?
+                           ?
+???????????????????????????????????????????????????????????????
+? GovernanceService (Business Logic)                           ?
+?  • Session management                                        ?
+?  • Event coordination                                        ?
+?  • Idempotency checks                                        ?
+???????????????????????????????????????????????????????????????
+                           ?
+                           ?
+???????????????????????????????????????????????????????????????
+? TelemetryLogger (File I/O)                                   ?
+?  • Thread-safe writes                                        ?
+?  • Timeout protection                                        ?
+?  • Silent failure                                            ?
+???????????????????????????????????????????????????????????????
+                           ?
+                           ?
+???????????????????????????????????????????????????????????????
+? %LocalAppData%\DynamoGovernance\Logs\                       ?
+?  telemetry_2026-01-10.jsonl                                  ?
+???????????????????????????????????????????????????????????????
+```
+
+## Failsafe Design Principles
+
+### 1. Never Impact Runtime
+- All operations wrapped in try-catch
+- Silent failure mode (no exceptions thrown)
+- 5-second timeout on all blocking operations
+- Auto-disable on initialization failure
+
+### 2. Thread Safety
+- SemaphoreSlim for file access synchronization
+- Async methods for non-lifecycle operations
+- Synchronous methods for lifecycle (avoid deadlocks)
+
+### 3. Idempotency
+- `EndSession()` safe to call multiple times
+- Session state tracking (`_sessionEnded` flag)
+- Prevents duplicate log entries
+
+### 4. Performance
+- Direct file writes (no memory buffering)
+- Minimal overhead (< 10ms startup, < 5ms per event)
+- Fire-and-forget async logging
+- Daily rotation (prevents large files)
+
+## Deployment Architecture
+
+### Build Process
+
+```
+????????????????????????
+?  dotnet build        ?
+????????????????????????
+          ?
+          ?
+????????????????????????
+?  Post-Build Event    ?
+?  (xcopy DLLs)        ?
+????????????????????????
+          ?
+          ?
+????????????????????????????????????????????????
+?  C:\DynamoDev\packages\DynamoGovernance\     ?
+?  ??? pkg.json                                ?
+?  ??? extra\                                  ?
+?  ?   ??? DynamoGovernance_ExtensionDef.xml  ?
+?  ??? bin\                                    ?
+?      ??? DynamoGovernance.Extension.dll     ?
+?      ??? DynamoGovernance.Core.dll          ?
+????????????????????????????????????????????????
+```
+
+### Runtime Discovery
+
+1. Dynamo scans `packages\` folder
+2. Reads `pkg.json` metadata
+3. Loads extension via `ExtensionDefinition.xml`
+4. Calls `Startup()` ? `Ready()` ? `Shutdown()` ? `Dispose()`
+
+## Output Format
+
+### Log File Structure
+```
+%LocalAppData%\DynamoGovernance\Logs\
+??? telemetry_2026-01-10.jsonl
+??? telemetry_2026-01-11.jsonl
+??? telemetry_2026-01-12.jsonl
+```
+
+### JSONL Format
+One JSON object per line (newline-delimited):
+```json
+{"schema_version":"1.0","event_id":"...",..."outcome":"session_started"}
+{"schema_version":"1.0","event_id":"...",..."outcome":"extension_ready"}
+{"schema_version":"1.0","event_id":"...",..."outcome":"session_ended"}
+```
+
+**Benefits**:
+- Easy streaming and parsing
+- Append-only (no file rewriting)
+- Works with standard JSON tools
+- Grep-able and analyzable
+
+## Security Considerations
+
+### Data Privacy
+- **User IDs**: SHA256-hashed by default
+- **Machine IDs**: SHA256-hashed by default
+- **Configurable**: Can disable hashing if needed
+
+### File Storage
+- **Local only**: No network transmission
+- **User-scoped**: Stored in user's AppData
+- **No PII**: Graph content not logged
+
+## Extensibility Points
+
+### Future Enhancements
+1. **Event Hooks**: Add workspace/graph event listeners
+2. **Package Tracking**: Monitor package usage
+3. **Custom Nodes**: Track custom node adoption
+4. **ViewExtension UI**: Settings and data viewer
+5. **Central Upload**: Batch send to analytics server
+6. **Performance Metrics**: Execution time tracking
+
+### Adding New Event Types
+```csharp
+// Simply call LogEvent with new outcome
+await _governanceService.LogEventAsync("graph_executed", graphId);
+await _governanceService.LogEventAsync("package_loaded");
+await _governanceService.LogEventAsync("node_error", errorDetails: ex.Message);
+```
+
+## Version History
+
+- **v1.0.0** - Initial release with session tracking
+- **v1.0.1** - Fixed duplicate session_ended logs (idempotency)
+
+## Dependencies
+
+### NuGet Packages
+- `DynamoVisualProgramming.Core` v3.0.3.7597
+- `System.Text.Json` (included in .NET 8)
+
+### Runtime Requirements
+- .NET 8 Runtime
+- Dynamo 3.x or later
+- Windows OS (uses %LocalAppData%)
+
+## Configuration
+
+### ID Hashing (On/Off)
+```csharp
+// In GovernanceTelemetryExtension.cs
+_governanceService = new GovernanceService(useHashedIds: true);  // Default
+_governanceService = new GovernanceService(useHashedIds: false); // Plain text
+```
+
+### Log Directory (Custom Path)
+```csharp
+// In TelemetryLogger constructor
+var logger = new TelemetryLogger(@"C:\CustomPath\Logs");
+```
+
+### Disable Extension
+Remove or rename the extension folder:
+```
+C:\DynamoDev\packages\DynamoGovernance\
+```

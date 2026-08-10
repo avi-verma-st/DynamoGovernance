@@ -1,0 +1,4 @@
+<ExtensionDefinition>
+  <AssemblyPath>bin\DynamoGovernance.Extension.dll</AssemblyPath>
+  <TypeName>DynamoGovernance.Extension.GovernanceTelemetryExtension</TypeName>
+</ExtensionDefinition>

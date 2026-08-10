@@ -6,4 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Post-build event to copy DLL to Dynamo dev packages -->
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="xcopy /Y /I &quot;$(TargetPath)&quot; &quot;C:\DynamoDev\packages\DynamoGovernance\bin\&quot;" ContinueOnError="true" />
+    <Exec Command="xcopy /Y /I &quot;$(TargetDir)$(TargetName).pdb&quot; &quot;C:\DynamoDev\packages\DynamoGovernance\bin\&quot;" ContinueOnError="true" />
+  </Target>
+
 </Project>

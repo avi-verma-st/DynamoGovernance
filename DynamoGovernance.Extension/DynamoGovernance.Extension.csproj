@@ -14,4 +14,14 @@
     <ProjectReference Include="..\DynamoGovernance.Core\DynamoGovernance.Core.csproj" />
   </ItemGroup>
 
+  <!-- Post-build event to copy DLLs to Dynamo dev packages -->
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Message Text="Copying DynamoGovernance extension to deployment location..." Importance="high" />
+    <Exec Command="xcopy /Y /I &quot;$(TargetPath)&quot; &quot;C:\DynamoDev\packages\DynamoGovernance\bin\&quot;" ContinueOnError="true" />
+    <Exec Command="xcopy /Y /I &quot;$(TargetDir)$(TargetName).pdb&quot; &quot;C:\DynamoDev\packages\DynamoGovernance\bin\&quot;" ContinueOnError="true" />
+    <Exec Command="xcopy /Y /I &quot;$(TargetDir)DynamoGovernance.Core.dll&quot; &quot;C:\DynamoDev\packages\DynamoGovernance\bin\&quot;" ContinueOnError="true" />
+    <Exec Command="xcopy /Y /I &quot;$(TargetDir)DynamoGovernance.Core.pdb&quot; &quot;C:\DynamoDev\packages\DynamoGovernance\bin\&quot;" ContinueOnError="true" />
+    <Message Text="DynamoGovernance extension copied successfully!" Importance="high" />
+  </Target>
+
 </Project>

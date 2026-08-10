@@ -1,46 +1,43 @@
 ﻿using Dynamo.Extensions;
 
-namespace DynamoGovernance.Extension
+using DynamoGovernance.Core.Services;
+
+namespace DynamoGovernance.Extension;
+
+public class GovernanceTelemetryExtension : IExtension
 {
-    public class GovernanceTelemetryExtension : IExtension
+    private GovernanceService? _governanceService;
+
+    public string UniqueId => "F2BA577E-4C5C-4A37-8BFC-2A5C11FAC698";
+    public string Name => "Dynamo Governance Telemetry";
+
+    public void Startup(StartupParams sp)
     {
-        public string UniqueId => "F2BA577E-4C5C-4A37-8BFC-2A5C11FAC698";
+        // Initialize with hashed IDs (set to false for plain text)
+        _governanceService = new GovernanceService(useHashedIds: true);
 
-        public string Name => "Dynamo Governance Telemetry";
+        string dynamoVersion = sp.DynamoVersion?.ToString() ?? "Unknown";
+        string hostApplication = "DynamoCore"; // Will be set based on host context
 
-        public void Dispose()
-        {
-        }
+        _governanceService.StartSession(dynamoVersion, hostApplication);
+    }
 
-        public void Ready(ReadyParams sp)
-        {
-            WriteTestMessage("Ready");
-        }
+    public void Ready(ReadyParams sp)
+    {
+        // Use synchronous logging to avoid deadlocks in lifecycle methods
+        _governanceService?.LogEvent("extension_ready");
 
-        public void Shutdown()
-        {
-            WriteTestMessage("Shutdown");
-        }
+        // TODO: Hook into workspace events here
+        // sp.CurrentWorkspaceModel - access current workspace
+    }
 
-        public void Startup(StartupParams sp)
-        {
-            WriteTestMessage("Startup");
-        }
-        private static void WriteTestMessage(string lifecycleEvent)
-        {
-            string folder = Path.Combine(
-                Environment.GetFolderPath(
-                    Environment.SpecialFolder.LocalApplicationData),
-                "DynamoGovernance",
-                "Logs");
+    public void Shutdown()
+    {
+        _governanceService?.EndSession();
+    }
 
-            Directory.CreateDirectory(folder);
-
-            string path = Path.Combine(folder, "extension-test.log");
-
-            File.AppendAllText(
-                path,
-                $"{DateTimeOffset.UtcNow:O} | {lifecycleEvent}{Environment.NewLine}");
-        }
+    public void Dispose()
+    {
+        _governanceService?.Dispose();
     }
 }
