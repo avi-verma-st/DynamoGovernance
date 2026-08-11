@@ -1,119 +1,125 @@
 using System.Text.Json;
-using System.Text.Json;
 using System.Text.Json.Serialization;
-using DynamoGovernance.Core.Models;
+using System.Threading.Channels;
 
 namespace DynamoGovernance.Core.Services;
 
-/// <summary>
-/// Simple JSONL logger for telemetry events - fully non-blocking and failsafe
-/// </summary>
-public class TelemetryLogger : IDisposable
+public sealed class TelemetryLogger : IDisposable
 {
-    private readonly string _logFilePath;
-    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private const int QueueCapacity = 1024;
+    private static readonly TimeSpan ShutdownFlushTimeout = TimeSpan.FromMilliseconds(200);
+
+    private readonly string _logDirectory;
+    private readonly Channel<object> _queue;
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly JsonSerializerOptions _jsonOptions;
-    private readonly bool _enableLogging = true;
+    private readonly Task _writerTask;
+    private int _disposed;
+    private long _droppedRecordCount;
 
     public TelemetryLogger(string? logDirectory = null)
     {
-        try
+        _logDirectory = logDirectory ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "DynamoGovernance",
+            "Logs");
+
+        _jsonOptions = new JsonSerializerOptions
         {
-            string directory = logDirectory ?? Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "DynamoGovernance",
-                "Logs");
+            WriteIndented = false,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
 
-            Directory.CreateDirectory(directory);
-
-            // Single file per day
-            string fileName = $"telemetry_{DateTime.UtcNow:yyyy-MM-dd}.jsonl";
-            _logFilePath = Path.Combine(directory, fileName);
-
-            _jsonOptions = new JsonSerializerOptions
-            {
-                WriteIndented = false,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            };
-        }
-        catch
+        _queue = Channel.CreateBounded<object>(new BoundedChannelOptions(QueueCapacity)
         {
-            // If initialization fails, disable logging to prevent issues
-            _enableLogging = false;
-        }
+            FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = true,
+            SingleWriter = false,
+            AllowSynchronousContinuations = false
+        });
+
+        _writerTask = Task.Run(ProcessQueueAsync);
     }
 
-    /// <summary>
-    /// Logs a telemetry event asynchronously - fire and forget, never blocks
-    /// </summary>
-    public async Task LogAsync(TelemetryEvent telemetryEvent)
+    public long DroppedRecordCount => Interlocked.Read(ref _droppedRecordCount);
+
+    public bool Log<T>(T telemetryEvent) where T : class
     {
-        if (!_enableLogging) return;
-
-        try
+        if (Volatile.Read(ref _disposed) != 0)
         {
-            // Use timeout to prevent indefinite waiting
-            if (!await _writeLock.WaitAsync(TimeSpan.FromSeconds(5)))
-            {
-                return; // Skip logging if can't acquire lock quickly
-            }
+            return false;
+        }
 
-            try
-            {
-                string jsonLine = JsonSerializer.Serialize(telemetryEvent, _jsonOptions);
-                await File.AppendAllLinesAsync(_logFilePath, new[] { jsonLine });
-            }
-            finally
-            {
-                _writeLock.Release();
-            }
-        }
-        catch
+        bool queued = _queue.Writer.TryWrite(telemetryEvent);
+        if (!queued)
         {
-            // Silently fail - logging should never crash the app
+            Interlocked.Increment(ref _droppedRecordCount);
         }
+
+        return queued;
     }
 
-    /// <summary>
-    /// Logs a telemetry event synchronously with timeout protection
-    /// </summary>
-    public void Log(TelemetryEvent telemetryEvent)
+    public Task<bool> LogAsync<T>(T telemetryEvent) where T : class
     {
-        if (!_enableLogging) return;
+        return Task.FromResult(Log(telemetryEvent));
+    }
 
+    private async Task ProcessQueueAsync()
+    {
         try
         {
-            // Use timeout to prevent blocking
-            if (!_writeLock.Wait(TimeSpan.FromSeconds(5)))
-            {
-                return; // Skip logging if can't acquire lock quickly
-            }
+            Directory.CreateDirectory(_logDirectory);
 
-            try
+            await foreach (object telemetryEvent in _queue.Reader.ReadAllAsync(_cancellationTokenSource.Token))
             {
-                string jsonLine = JsonSerializer.Serialize(telemetryEvent, _jsonOptions);
-                File.AppendAllLines(_logFilePath, new[] { jsonLine });
-            }
-            finally
-            {
-                _writeLock.Release();
+                try
+                {
+                    string jsonLine = JsonSerializer.Serialize(
+                        telemetryEvent,
+                        telemetryEvent.GetType(),
+                        _jsonOptions);
+
+                    string logFilePath = Path.Combine(
+                        _logDirectory,
+                        $"telemetry_{DateTime.UtcNow:yyyy-MM-dd}.jsonl");
+
+                    await File.AppendAllTextAsync(
+                        logFilePath,
+                        jsonLine + Environment.NewLine,
+                        _cancellationTokenSource.Token);
+                }
+                catch
+                {
+                    Interlocked.Increment(ref _droppedRecordCount);
+                }
             }
         }
         catch
         {
-            // Silently fail - logging should never crash the app
         }
     }
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
         try
         {
-            _writeLock?.Dispose();
+            _queue.Writer.TryComplete();
+            if (!_writerTask.Wait(ShutdownFlushTimeout))
+            {
+                _cancellationTokenSource.Cancel();
+            }
         }
         catch
         {
-            // Swallow disposal errors
+        }
+        finally
+        {
+            _cancellationTokenSource.Dispose();
         }
     }
 }

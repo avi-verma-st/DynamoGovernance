@@ -1,6 +1,6 @@
 ﻿using Dynamo.Extensions;
-
 using DynamoGovernance.Core.Services;
+using System.Diagnostics;
 
 namespace DynamoGovernance.Extension;
 
@@ -13,22 +13,32 @@ public class GovernanceTelemetryExtension : IExtension
 
     public void Startup(StartupParams sp)
     {
-        // Initialize with hashed IDs (set to false for plain text)
-        _governanceService = new GovernanceService(useHashedIds: true);
+        try
+        {
+            _governanceService = new GovernanceService();
+            (string hostName, string? hostVersion) = GetHostApplication();
+            string dynamoVersion = sp.DynamoVersion?.ToString() ?? "unknown";
+            string extensionVersion = typeof(GovernanceTelemetryExtension)
+                .Assembly
+                .GetName()
+                .Version?
+                .ToString(3) ?? "unknown";
 
-        string dynamoVersion = sp.DynamoVersion?.ToString() ?? "Unknown";
-        string hostApplication = "DynamoCore"; // Will be set based on host context
-
-        _governanceService.StartSession(dynamoVersion, hostApplication);
+            _governanceService.StartSession(
+                dynamoVersion,
+                hostName,
+                hostVersion,
+                extensionVersion);
+        }
+        catch
+        {
+            _governanceService = null;
+        }
     }
 
     public void Ready(ReadyParams sp)
     {
-        // Use synchronous logging to avoid deadlocks in lifecycle methods
-        _governanceService?.LogEvent("extension_ready");
-
-        // TODO: Hook into workspace events here
-        // sp.CurrentWorkspaceModel - access current workspace
+        _governanceService?.LogExtensionReady();
     }
 
     public void Shutdown()
@@ -39,5 +49,21 @@ public class GovernanceTelemetryExtension : IExtension
     public void Dispose()
     {
         _governanceService?.Dispose();
+        _governanceService = null;
+    }
+
+    private static (string HostName, string? HostVersion) GetHostApplication()
+    {
+        try
+        {
+            using Process process = Process.GetCurrentProcess();
+            string hostName = process.ProcessName;
+            string? hostVersion = process.MainModule?.FileVersionInfo.ProductVersion;
+            return (hostName, hostVersion);
+        }
+        catch
+        {
+            return ("unknown", null);
+        }
     }
 }
