@@ -1,5 +1,3 @@
-Here's the improved `README.md` file, incorporating the new content while maintaining the existing structure and information:
-
 # Dynamo Governance
 
 Dynamo Governance is a .NET 8 extension for Dynamo 3.x that captures local usage and graph-execution telemetry. It provides a foundation for understanding Dynamo activity and reliability without requiring enterprise infrastructure or affecting graph execution.
@@ -16,11 +14,11 @@ Dynamo Governance is a .NET 8 extension for Dynamo 3.x that captures local usage
 
 ## Solution structure
 
-- `DynamoGovernance.Core` — telemetry schema, identity collection, event creation, and local JSONL logging.
-- `DynamoGovernance.Extension` — Dynamo lifecycle and workspace event integration.
-- `DynamoGovernance.ViewExtension` — reserved for future user-interface features.
-- `DeploymentFiles` — Dynamo package metadata and extension manifest.
-- `Documentation` — architecture, features, and deployment guidance.
+- `DynamoGovernance.Core` â€” telemetry schema, identity collection, event creation, and local JSONL logging.
+- `DynamoGovernance.Extension` â€” Dynamo lifecycle and workspace event integration.
+- `DynamoGovernance.ViewExtension` â€” reserved for future user-interface features.
+- `DeploymentFiles` â€” Dynamo package metadata and extension manifest.
+- `Documentation` â€” architecture, features, and deployment guidance.
 
 ## Build and run
 
@@ -55,22 +53,3 @@ Each line contains one complete telemetry event. Logging uses a background queue
 ## Status
 
 The initial extension framework and local telemetry pipeline are implemented and working with Dynamo 3.x. Future work includes privacy protection, retention rules, broader event coverage, and enterprise telemetry integration.
-
-## Contributing
-
-We welcome contributions to Dynamo Governance! If you would like to contribute, please follow these steps:
-
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
-3. Make your changes and commit them with clear messages.
-4. Push your changes to your forked repository.
-5. Submit a pull request detailing your changes.
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-### Changes Made:
-1. **Added a Contributing Section**: This encourages community involvement and provides clear steps for potential contributors.
-2. **Added a License Section**: Including licensing information is essential for open-source projects, ensuring users understand their rights and responsibilities.
-3. **Maintained Original Structure**: The new sections were added at the end to preserve the flow of the document while enhancing its completeness.
