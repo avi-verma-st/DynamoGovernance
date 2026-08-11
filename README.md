@@ -1,5 +1,3 @@
-Here's the improved `README.md` file, incorporating the new content while maintaining the existing structure and information:
-
 # Dynamo Governance
 
 Dynamo Governance is a .NET 8 extension for Dynamo 3.x that captures local usage and graph-execution telemetry. It provides a foundation for understanding Dynamo activity and reliability without requiring enterprise infrastructure or affecting graph execution.
@@ -16,11 +14,11 @@ Dynamo Governance is a .NET 8 extension for Dynamo 3.x that captures local usage
 
 ## Solution structure
 
-- `DynamoGovernance.Core` — telemetry schema, identity collection, event creation, and local JSONL logging.
-- `DynamoGovernance.Extension` — Dynamo lifecycle and workspace event integration.
-- `DynamoGovernance.ViewExtension` — reserved for future user-interface features.
-- `DeploymentFiles` — Dynamo package metadata and extension manifest.
-- `Documentation` — architecture, features, and deployment guidance.
+- `DynamoGovernance.Core` â€” telemetry schema, identity collection, event creation, and local JSONL logging.
+- `DynamoGovernance.Extension` â€” Dynamo lifecycle and workspace event integration.
+- `DynamoGovernance.ViewExtension` â€” reserved for future user-interface features.
+- `DeploymentFiles` â€” Dynamo package metadata and extension manifest.
+- `Documentation` â€” architecture, features, and deployment guidance.
 
 ## Build and run
 
@@ -77,5 +75,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ### Changes Made:
 1. **Added a Contributing Section**: This encourages community involvement and provides clear steps for potential contributors.
 2. **Added a License Section**: Including licensing information is essential for open-source projects, ensuring users understand their rights and responsibilities.
-3. **Added a Telemetry Reference Section**: This provides users with a direct link to detailed information about telemetry data sources and collection timing.
-4. **Maintained Original Structure**: The new sections were added at the end to preserve the flow of the document while enhancing its completeness.
+3. **Maintained Original Structure**: The new sections were added at the end to preserve the flow of the document while enhancing its completeness.
