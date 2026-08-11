@@ -46,6 +46,10 @@ Each line contains one complete telemetry event. Logging uses a background queue
 
 > **Privacy notice:** The current testing profile stores the Windows account and machine name in plain text. Review and protect identifiers before production deployment.
 
+## Telemetry reference
+
+See [Telemetry data sources and collection timing](Documentation/TELEMETRY_DATA_SOURCES.md) for details about where each logged value comes from and when it is captured.
+
 ## Documentation
 
 - [Architecture](Documentation/ARCHITECTURE.md)
@@ -73,4 +77,5 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ### Changes Made:
 1. **Added a Contributing Section**: This encourages community involvement and provides clear steps for potential contributors.
 2. **Added a License Section**: Including licensing information is essential for open-source projects, ensuring users understand their rights and responsibilities.
-3. **Maintained Original Structure**: The new sections were added at the end to preserve the flow of the document while enhancing its completeness.
+3. **Added a Telemetry Reference Section**: This provides users with a direct link to detailed information about telemetry data sources and collection timing.
+4. **Maintained Original Structure**: The new sections were added at the end to preserve the flow of the document while enhancing its completeness.
