@@ -58,21 +58,3 @@ See [Telemetry data sources and collection timing](Documentation/TELEMETRY_DATA_
 
 The initial extension framework and local telemetry pipeline are implemented and working with Dynamo 3.x. Future work includes privacy protection, retention rules, broader event coverage, and enterprise telemetry integration.
 
-## Contributing
-
-We welcome contributions to Dynamo Governance! If you would like to contribute, please follow these steps:
-
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
-3. Make your changes and commit them with clear messages.
-4. Push your changes to your forked repository.
-5. Submit a pull request detailing your changes.
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-### Changes Made:
-1. **Added a Contributing Section**: This encourages community involvement and provides clear steps for potential contributors.
-2. **Added a License Section**: Including licensing information is essential for open-source projects, ensuring users understand their rights and responsibilities.
-3. **Maintained Original Structure**: The new sections were added at the end to preserve the flow of the document while enhancing its completeness.
