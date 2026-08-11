@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.0] - Unreleased — Universal Event Schema Milestone
+## [2.0.0] - Unreleased - Universal Event Schema Milestone
 
 ### Major changes
 
@@ -12,11 +12,16 @@
 - Added bounded issue and exception diagnostics.
 - Switched testing identity collection to plain Windows account and machine-name values with `testing_plaintext` metadata.
 - Advanced core and extension assembly versions to `2.0.0`.
+- Added live Dynamo subscriptions for workspace changes, workspace removal, graph evaluation start/completion, and node additions/removals.
+- Added `node.added` and `node.removed` payloads with graph and node context.
+- Added per-workspace execution numbering, monotonic duration measurement, start/completion correlation, result classification, and bounded node issue capture.
+- Added deterministic subscription cleanup during workspace removal, shutdown, and disposal.
 
 ### Fixed
 
 - Preserved idempotent session completion.
 - Ensured `Dispose` can enqueue the final session event before stopping the writer.
+- Prevented successful graph evaluations from producing `extension.error` records when Dynamo's empty `EvaluationCompletedEventArgs.Error` option throws from its getter.
 
 ## [1.0.1] - 2026-01-10
 

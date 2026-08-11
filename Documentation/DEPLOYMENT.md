@@ -28,7 +28,9 @@ Each line is one complete schema `1.0` event. The current testing build stores t
 
 ## Current runtime behavior
 
-The extension currently emits lifecycle events. Graph and node payload APIs are present, while live Dynamo event subscriptions are the next implementation task.
+The extension emits `session.started`, `extension.ready`, `session.ended`, `graph.execution.started`, `graph.execution.completed`, `node.added`, `node.removed`, and `extension.error` events. Graph execution records are emitted for Dynamo home-workspace evaluations and include the run mode, inferred trigger, graph/node counts, duration, outcome, and bounded node issue details.
+
+After deploying a new build, open Dynamo, add or remove a node, and run a graph. The current daily JSONL file should contain matching node and graph events with increasing `sequence_number` values.
 
 ## Safety behavior
 

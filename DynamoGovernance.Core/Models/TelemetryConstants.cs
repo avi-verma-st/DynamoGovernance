@@ -7,6 +7,8 @@ public static class TelemetryEventTypes
     public const string SessionEnded = "session.ended";
     public const string GraphExecutionStarted = "graph.execution.started";
     public const string GraphExecutionCompleted = "graph.execution.completed";
+    public const string NodeAdded = "node.added";
+    public const string NodeRemoved = "node.removed";
     public const string ExtensionError = "extension.error";
 }
 

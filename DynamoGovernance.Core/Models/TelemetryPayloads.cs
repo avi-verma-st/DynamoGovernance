@@ -50,6 +50,30 @@ public sealed class GraphExecutionCompletedPayload
     public ExecutionException? Exception { get; init; }
 }
 
+public sealed class NodeChangedPayload
+{
+    [JsonPropertyName("graph")]
+    public required GraphContext Graph { get; init; }
+
+    [JsonPropertyName("node")]
+    public required NodeContext Node { get; init; }
+}
+
+public sealed class NodeContext
+{
+    [JsonPropertyName("node_id")]
+    public required Guid NodeId { get; init; }
+
+    [JsonPropertyName("node_name")]
+    public required string NodeName { get; init; }
+
+    [JsonPropertyName("node_type")]
+    public required string NodeType { get; init; }
+
+    [JsonPropertyName("is_custom_node")]
+    public bool IsCustomNode { get; init; }
+}
+
 public sealed class GraphContext
 {
     [JsonPropertyName("graph_id")]

@@ -120,8 +120,8 @@ public sealed class GovernanceService : IDisposable
             new EventResult
             {
                 Status = status,
-                WarningCount = boundedPayload.Issues.Count(issue => issue.Severity == "warning"),
-                ErrorCount = boundedPayload.Issues.Count(issue => issue.Severity == "error")
+                WarningCount = payload.Issues.Count(issue => issue.Severity == "warning"),
+                ErrorCount = payload.Issues.Count(issue => issue.Severity == "error")
             },
             new EventTiming
             {
@@ -134,6 +134,14 @@ public sealed class GovernanceService : IDisposable
             causationEventId);
 
         return Task.FromResult(eventId);
+    }
+
+    public Guid LogNodeChanged(string eventType, NodeChangedPayload payload)
+    {
+        return LogEvent(
+            eventType,
+            payload,
+            new EventResult { Status = TelemetryResultStatuses.Succeeded });
     }
 
     public Guid LogExtensionError(string operation, Exception exception)

@@ -14,7 +14,7 @@ DynamoGovernance is a .NET 8 Dynamo extension that writes versioned telemetry ev
 
 `TelemetryEnvelope<TPayload>` contains the universal fields: `schema_version`, `event_type`, `event_version`, `event_id`, `session_id`, `sequence_number`, `correlation`, `timing`, `identity`, `application`, `result`, `payload`, and `telemetry`.
 
-Implemented payloads are `SessionStartedPayload`, `ExtensionReadyPayload`, `SessionEndedPayload`, `GraphExecutionStartedPayload`, `GraphExecutionCompletedPayload`, and `ExtensionErrorPayload`.
+Implemented payloads are `SessionStartedPayload`, `ExtensionReadyPayload`, `SessionEndedPayload`, `GraphExecutionStartedPayload`, `GraphExecutionCompletedPayload`, `NodeChangedPayload`, and `ExtensionErrorPayload`.
 
 ## Event flow
 
@@ -24,6 +24,12 @@ Implemented payloads are `SessionStartedPayload`, `ExtensionReadyPayload`, `Sess
 4. `TelemetryLogger.Log` attempts to enqueue the event in a bounded channel.
 5. A background worker serializes queued records and appends one JSON object per line.
 6. `Shutdown` records session duration; `Dispose` performs a short best-effort flush.
+
+## Dynamo event integration
+
+`GovernanceTelemetryExtension.Ready` subscribes existing and newly opened workspaces. Every workspace supplies `NodeAdded` and `NodeRemoved`; `HomeWorkspaceModel` additionally supplies `EvaluationStarted` and `EvaluationCompleted`. Subscriptions are removed when a workspace is removed and again during shutdown or disposal.
+
+Execution state is maintained per workspace. A monotonic stopwatch, execution number, start event ID, and graph context connect `graph.execution.started` with `graph.execution.completed`. Completion records include evaluation status, bounded node warning/error summaries, and an evaluation exception when Dynamo provides one.
 
 ## Runtime isolation
 
@@ -42,7 +48,10 @@ The testing profile stores unprotected values: `DOMAIN\\username` from `windows_
 ## Correlation and ordering
 
 - `sequence_number` increments atomically within a session.
-- `correlation_id` groups related events.
+- `session_id` groups every event produced during one Dynamo session.
+- `correlation_id` groups events belonging to one operation or causal workflow, not the entire session.
+- Standalone events use their own `event_id` as `correlation_id`.
+- `graph.execution.started` uses its event ID as the execution correlation ID; the matching `graph.execution.completed` record reuses that value.
 - `causation_event_id` identifies the event that caused another event.
 - Envelope and payload versions evolve independently.
 
