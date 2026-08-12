@@ -31,6 +31,8 @@ Implemented payloads are `SessionStartedPayload`, `ExtensionReadyPayload`, `Sess
 
 Execution state is maintained per workspace. A monotonic stopwatch, execution number, start event ID, and graph context connect `graph.execution.started` with `graph.execution.completed`. Completion records include evaluation status, bounded node warning/error summaries, and an evaluation exception when Dynamo provides one.
 
+Graph context records the file name for saved workspaces without including the containing directory. It also includes up to 50 node-type summary records grouped by runtime type, node kind, source assembly, and assembly version. This provides package-like provenance without depending on Dynamo Package Manager internals. `node_type_summary_truncated` indicates when additional types were omitted.
+
 ## Runtime isolation
 
 - Event calls use non-blocking `Channel.TryWrite`.

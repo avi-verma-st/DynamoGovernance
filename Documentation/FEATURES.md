@@ -7,7 +7,8 @@
 - Typed graph execution payloads for start and completion events.
 - Live `graph.execution.started` and `graph.execution.completed` logging from Dynamo evaluation events.
 - Live `node.added` and `node.removed` logging for existing, changed, and newly opened workspaces.
-- Per-workspace execution numbering, timing, correlation, run mode, trigger, node count, and custom-node count.
+- Per-workspace execution numbering, timing, correlation, saved graph name, run mode, trigger, node count, and custom-node count.
+- Bounded graph-level node-type summaries with runtime type, node kind, source assembly, assembly version, and usage count.
 - Graph result classification as succeeded, succeeded with warnings, failed, or skipped.
 - Node-state warning and error summaries with bounded diagnostic records.
 - Typed extension error payloads.

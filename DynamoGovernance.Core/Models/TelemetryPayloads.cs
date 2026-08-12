@@ -82,6 +82,9 @@ public sealed class GraphContext
     [JsonPropertyName("graph_id_source")]
     public string GraphIdSource { get; init; } = "workspace_guid";
 
+    [JsonPropertyName("graph_name")]
+    public string? GraphName { get; init; }
+
     [JsonPropertyName("is_saved")]
     public bool IsSaved { get; init; }
 
@@ -93,6 +96,30 @@ public sealed class GraphContext
 
     [JsonPropertyName("custom_node_count")]
     public int CustomNodeCount { get; init; }
+
+    [JsonPropertyName("node_type_summary")]
+    public IReadOnlyList<NodeTypeSummaryItem> NodeTypeSummary { get; init; } = [];
+
+    [JsonPropertyName("node_type_summary_truncated")]
+    public bool NodeTypeSummaryTruncated { get; init; }
+}
+
+public sealed class NodeTypeSummaryItem
+{
+    [JsonPropertyName("node_type")]
+    public required string NodeType { get; init; }
+
+    [JsonPropertyName("node_kind")]
+    public required string NodeKind { get; init; }
+
+    [JsonPropertyName("assembly_name")]
+    public required string AssemblyName { get; init; }
+
+    [JsonPropertyName("assembly_version")]
+    public string? AssemblyVersion { get; init; }
+
+    [JsonPropertyName("count")]
+    public int Count { get; init; }
 }
 
 public sealed class GraphExecutionContext

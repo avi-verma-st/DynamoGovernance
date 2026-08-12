@@ -11,6 +11,8 @@ namespace DynamoGovernance.Extension;
 
 public sealed class GovernanceTelemetryExtension : IExtension
 {
+    private const int MaximumNodeTypeSummaryItems = 50;
+
     private readonly object _subscriptionLock = new();
     private readonly Dictionary<WorkspaceModel, WorkspaceSubscription> _subscriptions = [];
     private readonly ConcurrentDictionary<Guid, ExecutionTracking> _activeExecutions = new();
@@ -347,15 +349,52 @@ public sealed class GovernanceTelemetryExtension : IExtension
     private static GraphContext CreateGraphContext(WorkspaceModel workspace)
     {
         NodeModel[] nodes = workspace.Nodes.ToArray();
+        NodeTypeSummaryItem[] nodeTypeSummary = nodes
+            .Select(node =>
+            {
+                Type nodeType = node.GetType();
+                var assemblyName = nodeType.Assembly.GetName();
+                return new
+                {
+                    NodeType = nodeType.FullName ?? nodeType.Name,
+                    NodeKind = IsCustomNode(node) ? "custom_node" : "compiled_node",
+                    AssemblyName = assemblyName.Name ?? "unknown",
+                    AssemblyVersion = assemblyName.Version?.ToString()
+                };
+            })
+            .GroupBy(node => new
+            {
+                node.NodeType,
+                node.NodeKind,
+                node.AssemblyName,
+                node.AssemblyVersion
+            })
+            .Select(group => new NodeTypeSummaryItem
+            {
+                NodeType = group.Key.NodeType,
+                NodeKind = group.Key.NodeKind,
+                AssemblyName = group.Key.AssemblyName,
+                AssemblyVersion = group.Key.AssemblyVersion,
+                Count = group.Count()
+            })
+            .OrderByDescending(item => item.Count)
+            .ThenBy(item => item.NodeType, StringComparer.Ordinal)
+            .ToArray();
+
         return new GraphContext
         {
             GraphId = workspace.Guid,
+            GraphName = string.IsNullOrWhiteSpace(workspace.FileName)
+                ? null
+                : Path.GetFileName(workspace.FileName),
             IsSaved = !string.IsNullOrWhiteSpace(workspace.FileName),
             RunMode = workspace is HomeWorkspaceModel homeWorkspace
                 ? homeWorkspace.RunSettings.RunType.ToString().ToLowerInvariant()
                 : "not_applicable",
             NodeCount = nodes.Length,
-            CustomNodeCount = nodes.Count(IsCustomNode)
+            CustomNodeCount = nodes.Count(IsCustomNode),
+            NodeTypeSummary = nodeTypeSummary.Take(MaximumNodeTypeSummaryItems).ToArray(),
+            NodeTypeSummaryTruncated = nodeTypeSummary.Length > MaximumNodeTypeSummaryItems
         };
     }
 

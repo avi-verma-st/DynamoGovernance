@@ -16,10 +16,22 @@ public static class TelemetryExample
         var graph = new GraphContext
         {
             GraphId = graphId,
+            GraphName = "ExampleGraph.dyn",
             IsSaved = true,
             RunMode = "manual",
             NodeCount = 84,
-            CustomNodeCount = 6
+            CustomNodeCount = 6,
+            NodeTypeSummary =
+            [
+                new NodeTypeSummaryItem
+                {
+                    NodeType = "CoreNodeModels.Input.DoubleInput",
+                    NodeKind = "compiled_node",
+                    AssemblyName = "CoreNodeModels",
+                    AssemblyVersion = "3.0.3.7597",
+                    Count = 4
+                }
+            ]
         };
         var execution = new GraphExecutionContext
         {
