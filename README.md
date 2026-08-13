@@ -1,6 +1,6 @@
 # Dynamo Governance
 
-Dynamo Governance is a .NET 8 extension for Dynamo 3.x that captures local usage and graph-execution telemetry. It provides a foundation for understanding Dynamo activity and reliability without requiring enterprise infrastructure or affecting graph execution.
+Dynamo Governance is a .NET 8 package for Dynamo 3.x that captures local usage and graph-execution telemetry and provides a basic WPF view extension. It provides a foundation for understanding Dynamo activity and reliability without requiring enterprise infrastructure or affecting graph execution.
 
 ## Current capabilities
 
@@ -11,27 +11,38 @@ Dynamo Governance is a .NET 8 extension for Dynamo 3.x that captures local usage
 - Captures bounded warning, error, and exception details.
 - Writes versioned JSONL records asynchronously to local daily log files.
 - Isolates logging failures so they do not interrupt Dynamo workflows.
+- Adds a `Dynamo Governance` sidebar containing a title and test button.
+- Displays a confirmation message when the view-extension button is clicked.
 
 ## Solution structure
 
 - `DynamoGovernance.Core` — telemetry schema, identity collection, event creation, and local JSONL logging.
 - `DynamoGovernance.Extension` — Dynamo lifecycle and workspace event integration.
-- `DynamoGovernance.ViewExtension` — reserved for future user-interface features.
-- `DeploymentFiles` — Dynamo package metadata and extension manifest.
+- `DynamoGovernance.ViewExtension` — Dynamo `IViewExtension` integration and the basic WPF sidebar.
+- `DeploymentFiles` — Dynamo package metadata, extension manifest, and view-extension manifest.
 - `Documentation` — architecture, features, and deployment guidance.
 
 ## Build and run
 
-Build the solution in Visual Studio 2022 or run:
+Close Dynamo or Revit, then build the solution in Visual Studio 2022 or run:
 
+```powershell
 dotnet build
+```
 
-The build deploys the extension binaries to:
+The build deploys the telemetry and view-extension binaries to:
 
+```text
 C:\DynamoDev\packages\DynamoGovernance\bin
+```
 
+Copy `DeploymentFiles/pkg.json` and the telemetry manifest during initial setup. The view-extension project automatically copies `DynamoGovernance_ViewExtensionDefinition.xml` into the package's `extra` directory. Ensure `C:\DynamoDev\packages` is configured as a Dynamo package path, then restart Dynamo or its host application.
 
-Copy the package and manifest files from `DeploymentFiles` as described in `Documentation/DEPLOYMENT.md`, then restart Dynamo or its host application.
+## View extension
+
+During startup, Dynamo reads `DynamoGovernance_ViewExtensionDefinition.xml`, loads `DynamoGovernance.ViewExtension.dll`, and creates `GovernanceViewExtension`. Its `Loaded()` method adds `GovernanceView` to the extensions sidebar. Open `Extensions > Dynamo Governance` if the panel is not already visible, then click `Test View Extension` to display the confirmation message.
+
+View extensions are loaded once per host session. Close all Dynamo and Revit processes before replacing the DLL, then restart the host after deployment.
 
 ## Local telemetry
 

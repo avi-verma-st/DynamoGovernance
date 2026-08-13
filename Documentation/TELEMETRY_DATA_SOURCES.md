@@ -45,6 +45,14 @@ At this stage, the extension:
 - Subscribes to graph evaluation events.
 - Writes the `extension.ready` event.
 
+## View extension
+
+**When:** Dynamo discovers `DynamoGovernance_ViewExtensionDefinition.xml` and calls `GovernanceViewExtension.Loaded()` after the UI is ready.
+
+**Code:** `DynamoGovernance.ViewExtension/GovernanceViewExtension.cs` and `DynamoGovernance.ViewExtension/GovernanceView.cs`
+
+The view extension adds the `Dynamo Governance` WPF sidebar and handles the `Test View Extension` button click. This basic interaction does not currently call `GovernanceService`, collect identity or graph data, or write a telemetry event.
+
 ## Node added or removed
 
 **When:** Dynamo raises `WorkspaceModel.NodeAdded` or `WorkspaceModel.NodeRemoved`.
@@ -170,3 +178,9 @@ Logging errors are isolated and do not interrupt Dynamo graph execution.
 **Code:** `DynamoGovernance.Core/Services/TelemetryLogger.cs`
 
 A background worker serializes each record and appends it to:
+
+```text
+%LocalAppData%\DynamoGovernance\Logs\telemetry_YYYY-MM-DD.jsonl
+```
+
+Each line contains one complete JSON event. File I/O is isolated from Dynamo callbacks, queue writes are non-blocking, and records may be dropped when the bounded queue is full rather than delaying graph execution.

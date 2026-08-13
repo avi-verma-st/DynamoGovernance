@@ -16,12 +16,15 @@
 - Added `node.added` and `node.removed` payloads with graph and node context.
 - Added per-workspace execution numbering, monotonic duration measurement, start/completion correlation, result classification, and bounded node issue capture.
 - Added deterministic subscription cleanup during workspace removal, shutdown, and disposal.
+- Added a Dynamo `IViewExtension` implementation with a basic WPF sidebar, title, test button, and confirmation message.
+- Added a separate view-extension discovery manifest and automatic post-build deployment of the view-extension DLL, symbols, and manifest.
 
 ### Fixed
 
 - Preserved idempotent session completion.
 - Ensured `Dispose` can enqueue the final session event before stopping the writer.
 - Prevented successful graph evaluations from producing `extension.error` records when Dynamo's empty `EvaluationCompletedEventArgs.Error` option throws from its getter.
+- Corrected the view-extension manifest assembly path to resolve the DLL from the package `bin` directory relative to the `extra` directory.
 
 ## [1.0.1] - 2026-01-10
 

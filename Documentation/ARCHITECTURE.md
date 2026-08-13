@@ -2,13 +2,28 @@
 
 ## Overview
 
-DynamoGovernance is a .NET 8 Dynamo extension that writes versioned telemetry events to local JSONL files. The first official schema is `1.0`. Every event uses a stable envelope and a strongly typed payload selected by `event_type`.
+DynamoGovernance is a .NET 8 Dynamo package containing a telemetry extension and a WPF view extension. The telemetry extension writes versioned events to local JSONL files. The first official schema is `1.0`; every event uses a stable envelope and a strongly typed payload selected by `event_type`.
 
 ## Projects
 
 - `DynamoGovernance.Extension`: Dynamo `IExtension` lifecycle integration and host-process discovery.
 - `DynamoGovernance.Core`: schema models, identity collection, event construction, diagnostic limits, and JSONL delivery.
-- `DynamoGovernance.ViewExtension`: reserved for a future user interface.
+- `DynamoGovernance.ViewExtension`: Dynamo `IViewExtension` lifecycle integration and a basic WPF sidebar.
+
+## View-extension flow
+
+1. Dynamo discovers `DynamoGovernance_ViewExtensionDefinition.xml` in the package's `extra` directory.
+2. The manifest resolves `..\bin\DynamoGovernance.ViewExtension.dll` relative to that directory.
+3. Dynamo creates `GovernanceViewExtension` and calls `Startup()`.
+4. When the Dynamo UI is ready, Dynamo calls `Loaded()`.
+5. `Loaded()` creates `GovernanceView` and passes it to `ViewLoadedParams.AddToExtensionsSideBar()`.
+6. The WPF view displays a title and test button; the button displays a confirmation message.
+
+The telemetry `IExtension` and UI `IViewExtension` have separate manifests and lifecycles. The basic view currently has no dependency on `GovernanceService` and does not emit telemetry when its button is clicked.
+
+## Package discovery
+
+The development package is rooted at `C:\DynamoDev\packages\DynamoGovernance`. Dynamo must have `C:\DynamoDev\packages` configured as a package path. Telemetry extension paths are resolved by the package loader, while the view-extension assembly path is resolved relative to the manifest in `extra`; consequently, its manifest uses `..\bin\DynamoGovernance.ViewExtension.dll`.
 
 ## Event model
 

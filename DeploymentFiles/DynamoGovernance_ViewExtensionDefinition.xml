@@ -1,0 +1,4 @@
+<ViewExtensionDefinition>
+  <AssemblyPath>..\bin\DynamoGovernance.ViewExtension.dll</AssemblyPath>
+  <TypeName>DynamoGovernance.ViewExtension.GovernanceViewExtension</TypeName>
+</ViewExtensionDefinition>

@@ -1,10 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-	  <UseWPF>true</UseWPF>
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,5 +15,22 @@
   <ItemGroup>
     <ProjectReference Include="..\DynamoGovernance.Core\DynamoGovernance.Core.csproj" />
   </ItemGroup>
+
+  <Target Name="DeployViewExtension" AfterTargets="Build">
+    <PropertyGroup>
+      <DynamoPackageDirectory>C:\DynamoDev\packages\DynamoGovernance</DynamoPackageDirectory>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(DynamoPackageDirectory)\bin" />
+    <MakeDir Directories="$(DynamoPackageDirectory)\extra" />
+
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFolder="$(DynamoPackageDirectory)\bin" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb"
+          DestinationFolder="$(DynamoPackageDirectory)\bin"
+          Condition="Exists('$(TargetDir)$(TargetName).pdb')" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\DeploymentFiles\DynamoGovernance_ViewExtensionDefinition.xml"
+          DestinationFolder="$(DynamoPackageDirectory)\extra" />
+  </Target>
 
 </Project>

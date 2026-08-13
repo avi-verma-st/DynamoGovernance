@@ -20,8 +20,12 @@
 - Daily files at `%LocalAppData%\DynamoGovernance\Logs\telemetry_YYYY-MM-DD.jsonl`.
 - Idempotent session shutdown.
 - Bounded graph diagnostics: 25 issues, 1,024-character issue messages, 2,048-character exception messages, and 8,192-character stack traces.
-- Automatic deployment of core and extension binaries to `C:\DynamoDev\packages\DynamoGovernance\bin` after build.
+- Dynamo `IViewExtension` integration with a `Dynamo Governance` WPF sidebar.
+- Basic sidebar title and `Test View Extension` button with a confirmation message.
+- Separate manifests for telemetry-extension and view-extension discovery.
+- Automatic deployment of core, telemetry-extension, and view-extension binaries to `C:\DynamoDev\packages\DynamoGovernance\bin` after build.
+- Automatic deployment of the view-extension manifest to `C:\DynamoDev\packages\DynamoGovernance\extra`.
 
 ## Runtime coverage
 
-The extension currently covers lifecycle events, graph evaluation start/completion, and node additions/removals. Workspace save/open/close events, package usage, connector changes, and detailed node execution timing are not yet logged.
+Telemetry currently covers lifecycle events, graph evaluation start/completion, and node additions/removals. The view extension provides only a basic UI verification surface and does not yet display telemetry or log UI interactions. Workspace save/open/close events, package usage, connector changes, and detailed node execution timing are not yet logged.
