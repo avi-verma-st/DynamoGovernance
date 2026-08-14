@@ -75,8 +75,10 @@ Using `bin\DynamoGovernance.ViewExtension.dll` would incorrectly make Dynamo sea
 2. Build the solution and confirm the files above were deployed.
 3. Start Revit and open Dynamo, or start Dynamo Sandbox.
 4. Open `Extensions > Dynamo Governance` if the sidebar is not already visible.
-5. Click `Test View Extension`.
-6. Confirm that the `The Dynamo Governance view extension is working.` message appears.
+5. Click `Open Design Automation Hub` and confirm the hub opens in the default browser.
+6. Confirm `Dynamo Training` opens the Design Automation Learning Resources list.
+7. Confirm `Dynamo Development Resources` opens the Dynamo development-resources folder.
+8. Sign in with an authorized organizational account if SharePoint requests authentication.
 
 View extensions are discovered only during startup. Rebuilding while Dynamo is open does not reload the extension; restart the host after each deployment.
 
@@ -125,7 +127,7 @@ Each line is one complete schema `1.0` event. The current testing build stores t
 
 The telemetry extension emits `session.started`, `extension.ready`, `session.ended`, `graph.execution.started`, `graph.execution.completed`, `node.added`, `node.removed`, and `extension.error` events. Graph execution records are emitted for Dynamo home-workspace evaluations and include the run mode, inferred trigger, graph/node counts, duration, outcome, and bounded node issue details.
 
-The view extension adds a basic WPF sidebar with a title and test button. It currently verifies UI discovery and interaction only; it does not display telemetry or emit an event for button clicks.
+The view extension adds a WPF sidebar with direct access to the Design Automation Hub. Its `Resources` section contains direct links to the Dynamo Training learning-resources list and the Dynamo Development Resources folder, in that order. The view does not display telemetry or emit events for link clicks.
 
 After deploying a new build, open Dynamo, add or remove a node, and run a graph. The current daily JSONL file should contain matching node and graph events with increasing `sequence_number` values.
 

@@ -17,9 +17,12 @@ DynamoGovernance is a .NET 8 Dynamo package containing a telemetry extension and
 3. Dynamo creates `GovernanceViewExtension` and calls `Startup()`.
 4. When the Dynamo UI is ready, Dynamo calls `Loaded()`.
 5. `Loaded()` creates `GovernanceView` and passes it to `ViewLoadedParams.AddToExtensionsSideBar()`.
-6. The WPF view displays a title and test button; the button displays a confirmation message.
+6. The WPF view displays a scrollable set of descriptive governance-resource buttons.
+7. A resource click uses the Windows shell to open the target in the user's default browser.
 
-The telemetry `IExtension` and UI `IViewExtension` have separate manifests and lifecycles. The basic view currently has no dependency on `GovernanceService` and does not emit telemetry when its button is clicked.
+`GovernanceResources` contains three direct destinations. `HubHome` supplies the primary Design Automation Hub button. The `Resources` collection supplies `Dynamo Training` as its first entry and `Dynamo Development Resources` as its second entry. All three destinations use their supplied canonical SharePoint URLs.
+
+The telemetry `IExtension` and UI `IViewExtension` have separate manifests and lifecycles. The view currently has no dependency on `GovernanceService` and does not emit telemetry when a resource is opened.
 
 ## Package discovery
 

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -12,40 +13,117 @@ public sealed class GovernanceView : UserControl
 
     private static UIElement CreateContent()
     {
-        var title = new TextBlock
-        {
-            Text = "Dynamo Governance",
-            FontSize = 22,
-            FontWeight = FontWeights.SemiBold,
-            Margin = new Thickness(0, 0, 0, 16)
-        };
-
-        var button = new Button
-        {
-            Content = "Test View Extension",
-            HorizontalAlignment = HorizontalAlignment.Left,
-            Padding = new Thickness(16, 8, 16, 8)
-        };
-
-        button.Click += OnButtonClicked;
-
         var panel = new StackPanel
         {
             Margin = new Thickness(20)
         };
 
-        panel.Children.Add(title);
-        panel.Children.Add(button);
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Dynamo Governance",
+            FontSize = 22,
+            FontWeight = FontWeights.SemiBold
+        });
 
-        return panel;
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Access trusted Design Automation Hub resources directly from Dynamo.",
+            Margin = new Thickness(0, 6, 0, 18),
+            TextWrapping = TextWrapping.Wrap
+        });
+
+        panel.Children.Add(CreateResourceButton(
+            GovernanceResources.HubHome,
+            isPrimary: true));
+
+        panel.Children.Add(new Separator
+        {
+            Margin = new Thickness(0, 18, 0, 12)
+        });
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Resources",
+            FontSize = 16,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+
+        foreach (GovernanceResource resource in GovernanceResources.Resources)
+        {
+            panel.Children.Add(CreateResourceButton(resource, isPrimary: false));
+        }
+
+        return new ScrollViewer
+        {
+            Content = panel,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
     }
 
-    private static void OnButtonClicked(object sender, RoutedEventArgs e)
+    private static Button CreateResourceButton(
+        GovernanceResource resource,
+        bool isPrimary)
     {
-        MessageBox.Show(
-            "The Dynamo Governance view extension is working.\nNext step is to link other resources directly within the extension!",
-            "Dynamo Governance",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        var content = new StackPanel();
+        content.Children.Add(new TextBlock
+        {
+            Text = resource.Title,
+            FontWeight = FontWeights.SemiBold,
+            FontSize = isPrimary ? 15 : 13
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = resource.Description,
+            Margin = new Thickness(0, 4, 0, 0),
+            TextWrapping = TextWrapping.Wrap,
+            FontWeight = FontWeights.Normal
+        });
+
+        var button = new Button
+        {
+            Content = content,
+            Tag = resource.Url,
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Padding = new Thickness(12),
+            Margin = new Thickness(0, 0, 0, 8),
+            ToolTip = $"Open {resource.Title} in your default browser"
+        };
+
+        if (isPrimary)
+        {
+            button.FontWeight = FontWeights.SemiBold;
+        }
+
+        button.Click += OnResourceClicked;
+
+        return button;
+    }
+
+    private static void OnResourceClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: Uri resourceUrl })
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = resourceUrl.AbsoluteUri,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(
+                $"The resource could not be opened.\n\n{exception.Message}",
+                "Dynamo Governance",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
 }

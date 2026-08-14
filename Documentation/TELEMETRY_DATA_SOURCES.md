@@ -51,7 +51,7 @@ At this stage, the extension:
 
 **Code:** `DynamoGovernance.ViewExtension/GovernanceViewExtension.cs` and `DynamoGovernance.ViewExtension/GovernanceView.cs`
 
-The view extension adds the `Dynamo Governance` WPF sidebar and handles the `Test View Extension` button click. This basic interaction does not currently call `GovernanceService`, collect identity or graph data, or write a telemetry event.
+The view extension adds the `Dynamo Governance` WPF sidebar and opens the Design Automation Hub, Dynamo Training, or Dynamo Development Resources in the user's default browser. Resource navigation does not currently call `GovernanceService`, collect identity or graph data, or write a telemetry event.
 
 ## Node added or removed
 

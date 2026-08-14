@@ -16,8 +16,11 @@
 - Added `node.added` and `node.removed` payloads with graph and node context.
 - Added per-workspace execution numbering, monotonic duration measurement, start/completion correlation, result classification, and bounded node issue capture.
 - Added deterministic subscription cleanup during workspace removal, shutdown, and disposal.
-- Added a Dynamo `IViewExtension` implementation with a basic WPF sidebar, title, test button, and confirmation message.
+- Added a Dynamo `IViewExtension` implementation with a WPF governance-resource sidebar.
 - Added a separate view-extension discovery manifest and automatic post-build deployment of the view-extension DLL, symbols, and manifest.
+- Added a primary direct link to the Design Automation Hub homepage.
+- Added a `Resources` section containing direct links to Dynamo Training and Dynamo Development Resources, in that order.
+- Added descriptive resource buttons, default-browser launching, and link-opening error handling.
 
 ### Fixed
 
