@@ -21,6 +21,7 @@
 - Added a primary direct link to the Design Automation Hub homepage.
 - Added a `Resources` section containing direct links to Dynamo Training and Dynamo Development Resources, in that order.
 - Added descriptive resource buttons, default-browser launching, and link-opening error handling.
+- Added `Extensions > Dynamo Governance > Launch` to reopen the sidebar after it is closed.
 
 ### Fixed
 

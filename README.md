@@ -13,6 +13,7 @@ Dynamo Governance is a .NET 8 package for Dynamo 3.x that captures local usage a
 - Isolates logging failures so they do not interrupt Dynamo workflows.
 - Adds a `Dynamo Governance` sidebar with compact, descriptive resource navigation.
 - Provides direct access to the Design Automation Hub, Dynamo Training, and Dynamo Development Resources.
+- Adds `Extensions > Dynamo Governance > Launch` so the sidebar can be reopened after it is closed.
 
 ## Solution structure
 
@@ -40,7 +41,7 @@ Copy `DeploymentFiles/pkg.json` and the telemetry manifest during initial setup.
 
 ## View extension
 
-During startup, Dynamo reads `DynamoGovernance_ViewExtensionDefinition.xml`, loads `DynamoGovernance.ViewExtension.dll`, and creates `GovernanceViewExtension`. Its `Loaded()` method adds `GovernanceView` to the extensions sidebar. Open `Extensions > Dynamo Governance` if the panel is not already visible. The panel opens the Design Automation Hub, Dynamo Training, and Dynamo Development Resources in the user's default browser. SharePoint uses the user's existing organizational authentication session.
+During startup, Dynamo reads `DynamoGovernance_ViewExtensionDefinition.xml`, loads `DynamoGovernance.ViewExtension.dll`, and creates `GovernanceViewExtension`. Its `Loaded()` method registers `Extensions > Dynamo Governance > Launch` and initially adds `GovernanceView` to the extensions sidebar. If the panel is closed, select `Launch` to open it again. The panel opens the Design Automation Hub, Dynamo Training, and Dynamo Development Resources in the user's default browser. SharePoint uses the user's existing organizational authentication session.
 
 View extensions are loaded once per host session. Close all Dynamo and Revit processes before replacing the DLL, then restart the host after deployment.
 

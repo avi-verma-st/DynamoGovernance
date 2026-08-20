@@ -27,6 +27,7 @@
 - Direct access to the canonical Dynamo Training learning-resources list.
 - Direct access to the canonical Dynamo Development Resources document-library folder.
 - Default-browser launching with a user-visible error message when a resource cannot be opened.
+- Persistent `Extensions > Dynamo Governance > Launch` command for reopening a closed sidebar.
 - Separate manifests for telemetry-extension and view-extension discovery.
 - Automatic deployment of core, telemetry-extension, and view-extension binaries to `C:\DynamoDev\packages\DynamoGovernance\bin` after build.
 - Automatic deployment of the view-extension manifest to `C:\DynamoDev\packages\DynamoGovernance\extra`.

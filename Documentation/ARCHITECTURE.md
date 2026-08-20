@@ -16,13 +16,15 @@ DynamoGovernance is a .NET 8 Dynamo package containing a telemetry extension and
 2. The manifest resolves `..\bin\DynamoGovernance.ViewExtension.dll` relative to that directory.
 3. Dynamo creates `GovernanceViewExtension` and calls `Startup()`.
 4. When the Dynamo UI is ready, Dynamo calls `Loaded()`.
-5. `Loaded()` creates `GovernanceView` and passes it to `ViewLoadedParams.AddToExtensionsSideBar()`.
-6. The WPF view displays a scrollable set of descriptive governance-resource buttons.
-7. A resource click uses the Windows shell to open the target in the user's default browser.
+5. `Loaded()` registers an `Extensions > Dynamo Governance > Launch` menu command.
+6. `Loaded()` creates `GovernanceView` and passes it to `ViewLoadedParams.AddToExtensionsSideBar()` for the initial display.
+7. If the sidebar is closed, selecting `Launch` creates a new `GovernanceView` and adds it to the sidebar again.
+8. The WPF view displays a scrollable set of descriptive governance-resource buttons.
+9. A resource click uses the Windows shell to open the target in the user's default browser.
 
 `GovernanceResources` contains three direct destinations. `HubHome` supplies the primary Design Automation Hub button. The `Resources` collection supplies `Dynamo Training` as its first entry and `Dynamo Development Resources` as its second entry. All three destinations use their supplied canonical SharePoint URLs.
 
-The telemetry `IExtension` and UI `IViewExtension` have separate manifests and lifecycles. The view currently has no dependency on `GovernanceService` and does not emit telemetry when a resource is opened.
+The menu remains available after the sidebar closes because closing the view does not unload `GovernanceViewExtension`. The menu click handler is detached during shutdown and disposal. The telemetry `IExtension` and UI `IViewExtension` have separate manifests and lifecycles. The view currently has no dependency on `GovernanceService` and does not emit telemetry when a resource is opened.
 
 ## Package discovery
 
