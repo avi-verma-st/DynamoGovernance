@@ -72,6 +72,15 @@ public sealed class NodeContext
 
     [JsonPropertyName("is_custom_node")]
     public bool IsCustomNode { get; init; }
+
+    [JsonPropertyName("node_origin")]
+    public required string NodeOrigin { get; init; }
+
+    [JsonPropertyName("package_name")]
+    public string? PackageName { get; init; }
+
+    [JsonPropertyName("package_version")]
+    public string? PackageVersion { get; init; }
 }
 
 public sealed class GraphContext
@@ -94,8 +103,23 @@ public sealed class GraphContext
     [JsonPropertyName("node_count")]
     public int NodeCount { get; init; }
 
+    [JsonPropertyName("built_in_node_count")]
+    public int BuiltInNodeCount { get; init; }
+
+    [JsonPropertyName("package_node_count")]
+    public int PackageNodeCount { get; init; }
+
+    [JsonPropertyName("local_custom_node_count")]
+    public int LocalCustomNodeCount { get; init; }
+
+    [JsonPropertyName("unknown_node_count")]
+    public int UnknownNodeCount { get; init; }
+
     [JsonPropertyName("custom_node_count")]
     public int CustomNodeCount { get; init; }
+
+    [JsonPropertyName("packages")]
+    public IReadOnlyList<GraphPackageReference> Packages { get; init; } = [];
 
     [JsonPropertyName("node_type_summary")]
     public IReadOnlyList<NodeTypeSummaryItem> NodeTypeSummary { get; init; } = [];
@@ -112,14 +136,38 @@ public sealed class NodeTypeSummaryItem
     [JsonPropertyName("node_kind")]
     public required string NodeKind { get; init; }
 
+    [JsonPropertyName("node_origin")]
+    public required string NodeOrigin { get; init; }
+
     [JsonPropertyName("assembly_name")]
     public required string AssemblyName { get; init; }
 
     [JsonPropertyName("assembly_version")]
     public string? AssemblyVersion { get; init; }
 
+    [JsonPropertyName("package_name")]
+    public string? PackageName { get; init; }
+
+    [JsonPropertyName("package_version")]
+    public string? PackageVersion { get; init; }
+
     [JsonPropertyName("count")]
     public int Count { get; init; }
+}
+
+public sealed class GraphPackageReference
+{
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
+
+    [JsonPropertyName("version")]
+    public string? Version { get; init; }
+
+    [JsonPropertyName("node_count")]
+    public int NodeCount { get; init; }
+
+    [JsonPropertyName("node_type_count")]
+    public int NodeTypeCount { get; init; }
 }
 
 public sealed class GraphExecutionContext

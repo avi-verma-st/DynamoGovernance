@@ -184,3 +184,5 @@ A background worker serializes each record and appends it to:
 ```
 
 Each line contains one complete JSON event. File I/O is isolated from Dynamo callbacks, queue writes are non-blocking, and records may be dropped when the bounded queue is full rather than delaying graph execution.
+
+JSONL records are append-only. Adding or removing a node creates a new event containing the graph and package snapshot at that moment; previously written records are not updated. Graph execution start and completion events also capture a current snapshot.

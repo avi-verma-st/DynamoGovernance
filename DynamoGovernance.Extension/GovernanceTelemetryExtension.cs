@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Text.Json;
 using Dynamo.Extensions;
 using Dynamo.Graph.Nodes;
 using Dynamo.Graph.Workspaces;
@@ -12,7 +13,13 @@ namespace DynamoGovernance.Extension;
 public sealed class GovernanceTelemetryExtension : IExtension
 {
     private const int MaximumNodeTypeSummaryItems = 50;
+    private const string BuiltInNodeOrigin = "built_in";
+    private const string PackageNodeOrigin = "package";
+    private const string LocalCustomNodeOrigin = "local_custom_node";
+    private const string UnknownNodeOrigin = "unknown";
 
+    private static readonly ConcurrentDictionary<string, PackageLookup> PackageLookupCache =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly object _subscriptionLock = new();
     private readonly Dictionary<WorkspaceModel, WorkspaceSubscription> _subscriptions = [];
     private readonly ConcurrentDictionary<Guid, ExecutionTracking> _activeExecutions = new();
@@ -216,6 +223,7 @@ public sealed class GovernanceTelemetryExtension : IExtension
     {
         try
         {
+            NodeInventoryItem nodeInventory = DescribeNode(node);
             _governanceService?.LogNodeChanged(
                 eventType,
                 new NodeChangedPayload
@@ -225,8 +233,11 @@ public sealed class GovernanceTelemetryExtension : IExtension
                     {
                         NodeId = node.GUID,
                         NodeName = node.Name,
-                        NodeType = node.GetType().FullName ?? node.GetType().Name,
-                        IsCustomNode = IsCustomNode(node)
+                        NodeType = nodeInventory.NodeType,
+                        IsCustomNode = nodeInventory.IsCustomNode,
+                        NodeOrigin = nodeInventory.NodeOrigin,
+                        PackageName = nodeInventory.Package?.Name,
+                        PackageVersion = nodeInventory.Package?.Version
                     }
                 });
         }
@@ -349,36 +360,48 @@ public sealed class GovernanceTelemetryExtension : IExtension
     private static GraphContext CreateGraphContext(WorkspaceModel workspace)
     {
         NodeModel[] nodes = workspace.Nodes.ToArray();
-        NodeTypeSummaryItem[] nodeTypeSummary = nodes
-            .Select(node =>
-            {
-                Type nodeType = node.GetType();
-                var assemblyName = nodeType.Assembly.GetName();
-                return new
-                {
-                    NodeType = nodeType.FullName ?? nodeType.Name,
-                    NodeKind = IsCustomNode(node) ? "custom_node" : "compiled_node",
-                    AssemblyName = assemblyName.Name ?? "unknown",
-                    AssemblyVersion = assemblyName.Version?.ToString()
-                };
-            })
+        NodeInventoryItem[] inventory = nodes.Select(DescribeNode).ToArray();
+        NodeTypeSummaryItem[] nodeTypeSummary = inventory
             .GroupBy(node => new
             {
                 node.NodeType,
                 node.NodeKind,
+                node.NodeOrigin,
                 node.AssemblyName,
-                node.AssemblyVersion
+                node.AssemblyVersion,
+                PackageName = node.Package?.Name,
+                PackageVersion = node.Package?.Version
             })
             .Select(group => new NodeTypeSummaryItem
             {
                 NodeType = group.Key.NodeType,
                 NodeKind = group.Key.NodeKind,
+                NodeOrigin = group.Key.NodeOrigin,
                 AssemblyName = group.Key.AssemblyName,
                 AssemblyVersion = group.Key.AssemblyVersion,
+                PackageName = group.Key.PackageName,
+                PackageVersion = group.Key.PackageVersion,
                 Count = group.Count()
             })
             .OrderByDescending(item => item.Count)
             .ThenBy(item => item.NodeType, StringComparer.Ordinal)
+            .ToArray();
+        GraphPackageReference[] packages = inventory
+            .Where(item => item.Package is not null)
+            .GroupBy(item => new
+            {
+                item.Package!.Name,
+                item.Package.Version
+            })
+            .Select(group => new GraphPackageReference
+            {
+                Name = group.Key.Name,
+                Version = group.Key.Version,
+                NodeCount = group.Count(),
+                NodeTypeCount = group.Select(item => item.NodeType).Distinct(StringComparer.Ordinal).Count()
+            })
+            .OrderBy(package => package.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(package => package.Version, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
         return new GraphContext
@@ -392,10 +415,137 @@ public sealed class GovernanceTelemetryExtension : IExtension
                 ? homeWorkspace.RunSettings.RunType.ToString().ToLowerInvariant()
                 : "not_applicable",
             NodeCount = nodes.Length,
-            CustomNodeCount = nodes.Count(IsCustomNode),
+            BuiltInNodeCount = inventory.Count(item => item.NodeOrigin == BuiltInNodeOrigin),
+            PackageNodeCount = inventory.Count(item => item.NodeOrigin == PackageNodeOrigin),
+            LocalCustomNodeCount = inventory.Count(item => item.NodeOrigin == LocalCustomNodeOrigin),
+            UnknownNodeCount = inventory.Count(item => item.NodeOrigin == UnknownNodeOrigin),
+            CustomNodeCount = inventory.Count(item => item.IsCustomNode),
+            Packages = packages,
             NodeTypeSummary = nodeTypeSummary.Take(MaximumNodeTypeSummaryItems).ToArray(),
             NodeTypeSummaryTruncated = nodeTypeSummary.Length > MaximumNodeTypeSummaryItems
         };
+    }
+
+    private static NodeInventoryItem DescribeNode(NodeModel node)
+    {
+        Type nodeType = node.GetType();
+        var assemblyName = nodeType.Assembly.GetName();
+        bool isCustomNode = IsCustomNode(node);
+        string? sourcePath = isCustomNode
+            ? GetCustomNodeDefinitionPath(node)
+            : GetAssemblyLocation(nodeType);
+        PackageMetadata? package = ResolvePackage(sourcePath);
+        string nodeOrigin = package is not null
+            ? PackageNodeOrigin
+            : isCustomNode
+                ? LocalCustomNodeOrigin
+                : string.IsNullOrWhiteSpace(sourcePath)
+                    ? UnknownNodeOrigin
+                    : BuiltInNodeOrigin;
+
+        return new NodeInventoryItem(
+            nodeType.FullName ?? nodeType.Name,
+            isCustomNode ? "custom_node" : "compiled_node",
+            nodeOrigin,
+            assemblyName.Name ?? "unknown",
+            assemblyName.Version?.ToString(),
+            isCustomNode,
+            package);
+    }
+
+    private static string? GetAssemblyLocation(Type nodeType)
+    {
+        try
+        {
+            return nodeType.Assembly.Location;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? GetCustomNodeDefinitionPath(NodeModel node)
+    {
+        try
+        {
+            object? definition = node.GetType().GetProperty("Definition")?.GetValue(node);
+            object? workspaceModel = definition?.GetType().GetProperty("WorkspaceModel")?.GetValue(definition);
+            return GetStringProperty(workspaceModel, "FileName") ??
+                GetStringProperty(definition, "FileName") ??
+                GetStringProperty(definition, "Path");
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? GetStringProperty(object? source, string propertyName)
+    {
+        return source?.GetType().GetProperty(propertyName)?.GetValue(source) as string;
+    }
+
+    private static PackageMetadata? ResolvePackage(string? sourcePath)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            return null;
+        }
+
+        try
+        {
+            string normalizedPath = Path.GetFullPath(sourcePath);
+            return PackageLookupCache
+                .GetOrAdd(normalizedPath, static path => new PackageLookup(FindPackage(path)))
+                .Package;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static PackageMetadata? FindPackage(string sourcePath)
+    {
+        try
+        {
+            string? directoryPath = Directory.Exists(sourcePath)
+                ? sourcePath
+                : Path.GetDirectoryName(sourcePath);
+            if (string.IsNullOrWhiteSpace(directoryPath))
+            {
+                return null;
+            }
+
+            for (var directory = new DirectoryInfo(directoryPath); directory is not null; directory = directory.Parent)
+            {
+                string manifestPath = Path.Combine(directory.FullName, "pkg.json");
+                if (!File.Exists(manifestPath))
+                {
+                    continue;
+                }
+
+                using JsonDocument manifest = JsonDocument.Parse(File.ReadAllText(manifestPath));
+                JsonElement root = manifest.RootElement;
+                string name = GetManifestString(root, "name") ?? directory.Name;
+                string? version = GetManifestString(root, "version");
+                return new PackageMetadata(name, version);
+            }
+        }
+        catch
+        {
+        }
+
+        return null;
+    }
+
+    private static string? GetManifestString(JsonElement manifest, string propertyName)
+    {
+        return manifest.TryGetProperty(propertyName, out JsonElement value) &&
+            value.ValueKind == JsonValueKind.String
+                ? value.GetString()
+                : null;
     }
 
     private static IReadOnlyList<ExecutionIssue> CreateExecutionIssues(WorkspaceModel workspace)
@@ -511,4 +661,17 @@ public sealed class GovernanceTelemetryExtension : IExtension
         Stopwatch Stopwatch,
         Guid StartedEventId,
         GraphExecutionContext Execution);
+
+    private sealed record NodeInventoryItem(
+        string NodeType,
+        string NodeKind,
+        string NodeOrigin,
+        string AssemblyName,
+        string? AssemblyVersion,
+        bool IsCustomNode,
+        PackageMetadata? Package);
+
+    private sealed record PackageMetadata(string Name, string? Version);
+
+    private sealed record PackageLookup(PackageMetadata? Package);
 }
