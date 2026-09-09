@@ -1,0 +1,67 @@
+{
+  "profiles": {
+    "DynamoGovernance.ViewExtension": {
+      "commandName": "Project"
+    },
+    "3.0.0": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime_3.0.0.7186\\DynamoSandbox.exe",
+      "workingDirectory": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime_3.0.0.7186"
+    },
+    "4.2.1": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime4.2.1.5887\\DynamoSandbox.exe",
+      "workingDirectory": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime4.2.1.5887"
+    },
+    "3.7.0": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.7.0\\DynamoSandbox.exe",
+      "workingDirectory": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.7.0"
+    },
+    "3.6.1": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.6.1.9895\\DynamoSandbox.exe",
+      "workingDirectory": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.6.1.9895"
+    },
+    "3.5.2": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.5.2.8914\\DynamoSandbox.exe",
+      "workingDirectory": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.5.2.8914"
+    },
+    "3.4.2": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.4.2.7731\\DynamoSandbox.exe",
+      "workingDirectory": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.4.2.7731"
+    },
+    "3.4.0": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.4.0.6892\\DynamoSandbox.exe",
+      "workingDirectory": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.4.0.6892"
+    },
+    "3.0.1": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.0.1.7382\\DynamoSandbox.exe",
+      "workingDirectory": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.0.1.7382"
+    },
+    "3.0.2": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.0.2.7476\\DynamoSandbox.exe",
+      "workingDirectory": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.0.2.7476"
+    },
+    "3.0.3": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.0.3.7597\\DynamoSandbox.exe",
+      "workingDirectory": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.0.3.7597"
+    },
+    "3.0.4": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.0.4\\DynamoSandbox.exe",
+      "workingDirectory": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.0.4"
+    },
+    "3.2.0": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.2.0.5210\\DynamoSandbox.exe",
+      "workingDirectory": "C:\\Users\\aviverma\\Code\\DynamoReleases\\DynamoCoreRuntime3.2.0.5210"
+    }
+  }
+}

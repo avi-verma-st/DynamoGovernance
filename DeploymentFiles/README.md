@@ -1,47 +1,36 @@
 # Deployment Files
 
-Copy these files to `C:\DynamoDev\packages\DynamoGovernance\` for extension discovery.
+These files allow Dynamo to discover the telemetry extension and view extension.
 
 ## Files
 
-### pkg.json
-Package metadata file for Dynamo package manager.
+- `pkg.json` — package metadata with Dynamo engine baseline `3.0.0`.
+- `DynamoGovernance_ExtensionDefinition.xml` — loads `DynamoGovernance.Extension.GovernanceTelemetryExtension`.
+- `DynamoGovernance_ViewExtensionDefinition.xml` — loads `DynamoGovernance.ViewExtension.GovernanceViewExtension` from `..\bin` because the manifest is placed under `extra`.
 
-### DynamoGovernance_ExtensionDefinition.xml
-Extension manifest that tells Dynamo how to load `GovernanceTelemetryExtension`.
+## Expected package structure
 
-### DynamoGovernance_ViewExtensionDefinition.xml
-View-extension manifest that tells Dynamo how to load `GovernanceViewExtension`. Because the manifest is deployed under `extra`, its assembly path is `..\bin\DynamoGovernance.ViewExtension.dll`.
-
-## Directory Structure
-
-After copying, your deployment should look like:
-```
+```text
 C:\DynamoDev\packages\DynamoGovernance\
 ??? pkg.json
-??? extra\
-?   ??? DynamoGovernance_ExtensionDefinition.xml
-?   ??? DynamoGovernance_ViewExtensionDefinition.xml
 ??? bin\
-    ??? DynamoGovernance.Extension.dll (auto-copied by build)
-    ??? DynamoGovernance.ViewExtension.dll (auto-copied by build)
-    ??? DynamoGovernance.Core.dll (auto-copied by build)
-    ??? *.pdb files (auto-copied by build)
+?   ??? DynamoGovernance.Core.dll
+?   ??? DynamoGovernance.Extension.dll
+?   ??? DynamoGovernance.ViewExtension.dll
+?   ??? *.pdb
+??? extra\
+    ??? DynamoGovernance_ExtensionDefinition.xml
+    ??? DynamoGovernance_ViewExtensionDefinition.xml
 ```
 
-## Manual Setup
+## Initial setup
 
 ```powershell
-# Create directory structure
 New-Item -Path "C:\DynamoDev\packages\DynamoGovernance\extra" -ItemType Directory -Force
 New-Item -Path "C:\DynamoDev\packages\DynamoGovernance\bin" -ItemType Directory -Force
-
-# Copy manifest files
-Copy-Item "DeploymentFiles\pkg.json" "C:\DynamoDev\packages\DynamoGovernance\"
-Copy-Item "DeploymentFiles\DynamoGovernance_ExtensionDefinition.xml" "C:\DynamoDev\packages\DynamoGovernance\extra\"
-
-# Build solution (DLLs and the view-extension manifest are deployed automatically)
+Copy-Item "DeploymentFiles\pkg.json" "C:\DynamoDev\packages\DynamoGovernance\" -Force
+Copy-Item "DeploymentFiles\DynamoGovernance_ExtensionDefinition.xml" "C:\DynamoDev\packages\DynamoGovernance\extra\" -Force
 dotnet build
 ```
 
-Close Dynamo and Revit before building because loaded extension DLLs are locked until the host exits. Ensure `C:\DynamoDev\packages` is configured as a Dynamo package path, and restart the host after deployment so Dynamo discovers both manifests.
+The build copies the assemblies and view-extension manifest. Close Dynamo, Revit, Civil 3D, or Sandbox before rebuilding because loaded assemblies remain locked. Restart the host after deployment.

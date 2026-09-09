@@ -2,242 +2,26 @@ using System.Text.Json.Serialization;
 
 namespace DynamoGovernance.Core.Models;
 
-public sealed class SessionStartedPayload
+public sealed class SessionStartedData
 {
-    [JsonPropertyName("startup_reason")]
-    public string StartupReason { get; init; } = "extension_startup";
+    [JsonPropertyName("identity")]
+    public required IdentityContext Identity { get; init; }
+
+    [JsonPropertyName("application")]
+    public required ApplicationContext Application { get; init; }
 }
 
-public sealed class ExtensionReadyPayload
+public sealed class NodeCountData
 {
-    [JsonPropertyName("initialization_completed")]
-    public bool InitializationCompleted { get; init; } = true;
+    [JsonPropertyName("node_count")]
+    public int NodeCount { get; init; }
 }
 
-public sealed class SessionEndedPayload
+public sealed class ExecutionCompletedData
 {
-    [JsonPropertyName("shutdown_reason")]
-    public string ShutdownReason { get; init; } = "dynamo_shutdown";
-
-    [JsonPropertyName("session_duration_ms")]
-    public required long SessionDurationMs { get; init; }
-}
-
-public sealed class GraphExecutionStartedPayload
-{
-    [JsonPropertyName("graph")]
-    public required GraphContext Graph { get; init; }
-
-    [JsonPropertyName("execution")]
-    public required GraphExecutionContext Execution { get; init; }
-}
-
-public sealed class GraphExecutionCompletedPayload
-{
-    [JsonPropertyName("graph")]
-    public required GraphContext Graph { get; init; }
-
-    [JsonPropertyName("execution")]
-    public required GraphExecutionContext Execution { get; init; }
-
-    [JsonPropertyName("issues")]
-    public IReadOnlyList<ExecutionIssue> Issues { get; init; } = [];
-
-    [JsonPropertyName("issues_summary")]
-    public required IssuesSummary IssuesSummary { get; init; }
-
-    [JsonPropertyName("exception")]
-    public ExecutionException? Exception { get; init; }
-}
-
-public sealed class NodeChangedPayload
-{
-    [JsonPropertyName("graph")]
-    public required GraphContext Graph { get; init; }
-
-    [JsonPropertyName("node")]
-    public required NodeContext Node { get; init; }
-}
-
-public sealed class NodeContext
-{
-    [JsonPropertyName("node_id")]
-    public required Guid NodeId { get; init; }
-
-    [JsonPropertyName("node_name")]
-    public required string NodeName { get; init; }
-
-    [JsonPropertyName("node_type")]
-    public required string NodeType { get; init; }
-
-    [JsonPropertyName("is_custom_node")]
-    public bool IsCustomNode { get; init; }
-
-    [JsonPropertyName("node_origin")]
-    public required string NodeOrigin { get; init; }
-
-    [JsonPropertyName("package_name")]
-    public string? PackageName { get; init; }
-
-    [JsonPropertyName("package_version")]
-    public string? PackageVersion { get; init; }
-}
-
-public sealed class GraphContext
-{
-    [JsonPropertyName("graph_id")]
-    public required Guid GraphId { get; init; }
-
-    [JsonPropertyName("graph_id_source")]
-    public string GraphIdSource { get; init; } = "workspace_guid";
-
-    [JsonPropertyName("graph_name")]
-    public string? GraphName { get; init; }
-
-    [JsonPropertyName("is_saved")]
-    public bool IsSaved { get; init; }
-
-    [JsonPropertyName("run_mode")]
-    public required string RunMode { get; init; }
-
     [JsonPropertyName("node_count")]
     public int NodeCount { get; init; }
 
-    [JsonPropertyName("built_in_node_count")]
-    public int BuiltInNodeCount { get; init; }
-
-    [JsonPropertyName("package_node_count")]
-    public int PackageNodeCount { get; init; }
-
-    [JsonPropertyName("local_custom_node_count")]
-    public int LocalCustomNodeCount { get; init; }
-
-    [JsonPropertyName("unknown_node_count")]
-    public int UnknownNodeCount { get; init; }
-
-    [JsonPropertyName("custom_node_count")]
-    public int CustomNodeCount { get; init; }
-
-    [JsonPropertyName("packages")]
-    public IReadOnlyList<GraphPackageReference> Packages { get; init; } = [];
-
-    [JsonPropertyName("node_type_summary")]
-    public IReadOnlyList<NodeTypeSummaryItem> NodeTypeSummary { get; init; } = [];
-
-    [JsonPropertyName("node_type_summary_truncated")]
-    public bool NodeTypeSummaryTruncated { get; init; }
-}
-
-public sealed class NodeTypeSummaryItem
-{
-    [JsonPropertyName("node_type")]
-    public required string NodeType { get; init; }
-
-    [JsonPropertyName("node_kind")]
-    public required string NodeKind { get; init; }
-
-    [JsonPropertyName("node_origin")]
-    public required string NodeOrigin { get; init; }
-
-    [JsonPropertyName("assembly_name")]
-    public required string AssemblyName { get; init; }
-
-    [JsonPropertyName("assembly_version")]
-    public string? AssemblyVersion { get; init; }
-
-    [JsonPropertyName("package_name")]
-    public string? PackageName { get; init; }
-
-    [JsonPropertyName("package_version")]
-    public string? PackageVersion { get; init; }
-
-    [JsonPropertyName("count")]
-    public int Count { get; init; }
-}
-
-public sealed class GraphPackageReference
-{
-    [JsonPropertyName("name")]
-    public required string Name { get; init; }
-
-    [JsonPropertyName("version")]
-    public string? Version { get; init; }
-
-    [JsonPropertyName("node_count")]
-    public int NodeCount { get; init; }
-
-    [JsonPropertyName("node_type_count")]
-    public int NodeTypeCount { get; init; }
-}
-
-public sealed class GraphExecutionContext
-{
-    [JsonPropertyName("execution_number")]
-    public required long ExecutionNumber { get; init; }
-
-    [JsonPropertyName("evaluation_requested")]
-    public bool EvaluationRequested { get; init; } = true;
-
-    [JsonPropertyName("evaluation_performed")]
-    public bool EvaluationPerformed { get; init; }
-
-    [JsonPropertyName("trigger")]
-    public required string Trigger { get; init; }
-}
-
-public sealed class ExecutionIssue
-{
-    [JsonPropertyName("severity")]
-    public required string Severity { get; init; }
-
-    [JsonPropertyName("source")]
-    public required string Source { get; init; }
-
-    [JsonPropertyName("node_id")]
-    public Guid? NodeId { get; init; }
-
-    [JsonPropertyName("node_name")]
-    public string? NodeName { get; init; }
-
-    [JsonPropertyName("node_type")]
-    public string? NodeType { get; init; }
-
-    [JsonPropertyName("message")]
-    public string? Message { get; init; }
-}
-
-public sealed class IssuesSummary
-{
-    [JsonPropertyName("captured_count")]
-    public int CapturedCount { get; init; }
-
-    [JsonPropertyName("total_count")]
-    public int TotalCount { get; init; }
-
-    [JsonPropertyName("truncated")]
-    public bool Truncated { get; init; }
-}
-
-public sealed class ExecutionException
-{
-    [JsonPropertyName("exception_type")]
-    public required string ExceptionType { get; init; }
-
-    [JsonPropertyName("message")]
-    public string? Message { get; init; }
-
-    [JsonPropertyName("stack_trace")]
-    public string? StackTrace { get; init; }
-
-    [JsonPropertyName("stack_trace_truncated")]
-    public bool StackTraceTruncated { get; init; }
-}
-
-public sealed class ExtensionErrorPayload
-{
-    [JsonPropertyName("operation")]
-    public required string Operation { get; init; }
-
-    [JsonPropertyName("exception")]
-    public required ExecutionException Exception { get; init; }
+    [JsonPropertyName("successful")]
+    public bool Successful { get; init; }
 }
