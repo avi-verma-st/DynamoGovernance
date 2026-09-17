@@ -2,11 +2,8 @@ using System.Text.Json.Serialization;
 
 namespace DynamoGovernance.Core.Models;
 
-public sealed class TelemetryRecord
+public class TelemetryRecord
 {
-    [JsonPropertyName("schema_version")]
-    public string SchemaVersion { get; init; } = "2.0";
-
     [JsonPropertyName("event")]
     public required string Event { get; init; }
 
@@ -15,9 +12,13 @@ public sealed class TelemetryRecord
 
     [JsonPropertyName("occurred_utc")]
     public required DateTimeOffset OccurredUtc { get; init; }
+}
 
+public sealed class TelemetryRecord<TPayload> : TelemetryRecord
+    where TPayload : class
+{
     [JsonPropertyName("data")]
-    public object? Data { get; init; }
+    public required TPayload Data { get; init; }
 }
 
 public sealed class IdentityContext

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dynamo Governance Log Visualizer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div>
+            <p class="eyebrow">Dynamo Governance</p>
+            <h1>Log visualizer</h1>
+            <p>A private, local dashboard generated directly in your browser.</p>
+        </div>
+        <div class="header-actions">
+            <label class="button" for="folderInput">Select log folder</label>
+            <input id="folderInput" type="file" webkitdirectory directory multiple accept=".jsonl,application/json">
+            <button id="clearButton" class="button secondary" type="button">Clear</button>
+        </div>
+    </header>
+
+    <main>
+        <section class="instructions">
+            <div>
+                <strong>Select the Dynamo Governance log folder</strong>
+                <p>In the folder picker, paste <code>%LOCALAPPDATA%\DynamoGovernance\Logs</code> into the address bar. Files stay on this computer.</p>
+            </div>
+            <span id="loadStatus" class="status">Waiting for logs</span>
+        </section>
+
+        <section class="metrics" aria-label="Usage summary">
+            <article class="card"><span>Sessions</span><strong id="sessionCount">0</strong><small><b id="userCount">0</b> unique users</small></article>
+            <article class="card"><span>Machines</span><strong id="machineCount">0</strong><small>with recorded sessions</small></article>
+            <article class="card"><span>Graphs opened</span><strong id="graphCount">0</strong><small>across all sessions</small></article>
+            <article class="card"><span>Executions</span><strong id="runCount">0</strong><small><b id="successRate">0%</b> successful</small></article>
+            <article class="card"><span>Packages</span><strong id="packageCount">0</strong><small>used by graph nodes</small></article>
+            <article class="card"><span>Last activity</span><strong id="lastDate">�</strong><small id="lastTime">No activity</small></article>
+        </section>
+
+        <div class="grid">
+            <section class="panel">
+                <div class="panel-heading">
+                    <div><p class="eyebrow">Activity</p><h2>Last 14 days</h2></div>
+                    <div class="legend"><i></i>Sessions <i></i>Executions</div>
+                </div>
+                <div id="chart" class="chart" aria-label="Daily sessions and executions"></div>
+            </section>
+            <section class="panel">
+                <div class="panel-heading"><div><p class="eyebrow">Popularity</p><h2>Top graphs</h2></div></div>
+                <p id="noGraphs" class="muted">No graph-open events loaded.</p>
+                <ol id="topGraphs" class="ranking"></ol>
+            </section>
+            <section class="panel">
+                <div class="panel-heading"><div><p class="eyebrow">Dependencies</p><h2>Top packages</h2></div></div>
+                <p id="noPackages" class="muted">No package information loaded.</p>
+                <ol id="topPackages" class="ranking"></ol>
+            </section>
+        </div>
+
+        <section class="panel sessions">
+            <div class="panel-heading">
+                <div><p class="eyebrow">Details</p><h2>Recent sessions</h2></div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Started</th><th>Status</th><th>User / machine</th><th>Application</th><th>Dynamo</th><th>Extension</th><th>Graphs</th><th>Runs</th><th>Duration</th></tr></thead>
+                    <tbody id="sessionRows"><tr><td colspan="9" class="muted">Select a log folder to begin.</td></tr></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel health">
+            <div><p class="eyebrow">Diagnostics</p><h2>Log health</h2></div>
+            <dl>
+                <div><dt>Files read</dt><dd id="fileCount">0</dd></div>
+                <div><dt>Valid records</dt><dd id="validCount">0</dd></div>
+                <div><dt>Invalid records</dt><dd id="invalidCount">0</dd></div>
+                <div><dt>Incomplete sessions</dt><dd id="incompleteCount">0</dd></div>
+            </dl>
+        </section>
+    </main>
+
+    <dialog id="sessionDialog">
+        <div class="dialog-header">
+            <div><p class="eyebrow">Session details</p><h2 id="dialogTitle">Dynamo session</h2></div>
+            <button id="closeDialog" class="close-button" type="button" aria-label="Close">&times;</button>
+        </div>
+        <div class="dialog-content">
+            <div id="sessionDetails" class="detail-grid"></div>
+            <section class="dialog-section"><h3>Graphs</h3><div id="sessionGraphs" class="graph-card-stack"></div></section>
+        </div>
+    </dialog>
+    <footer>No server and no upload: the selected files are processed only by this browser tab.</footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

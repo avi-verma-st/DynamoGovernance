@@ -62,42 +62,49 @@ public sealed class GovernanceService : IDisposable
             });
     }
 
-    public void LogExtensionReady()
+    public void LogGraphOpened(
+        GraphEventData graph,
+        DateTimeOffset? occurredUtc = null)
     {
-        LogEvent(TelemetryEventTypes.ExtensionReady);
+        LogEvent(TelemetryEventTypes.GraphOpened, graph, occurredUtc);
     }
 
-    public void LogGraphExecutionStarted(int nodeCount, DateTimeOffset occurredUtc)
+    public void LogGraphClosed(
+        GraphEventData graph,
+        DateTimeOffset? occurredUtc = null)
     {
-        LogEvent(
-            TelemetryEventTypes.GraphExecutionStarted,
-            new NodeCountData { NodeCount = nodeCount },
-            occurredUtc);
+        LogEvent(TelemetryEventTypes.GraphClosed, graph, occurredUtc);
     }
 
-    public void LogGraphExecutionCompleted(
-        int nodeCount,
+    public void LogGraphSaved(
+        GraphEventData graph,
+        DateTimeOffset? occurredUtc = null)
+    {
+        LogEvent(TelemetryEventTypes.GraphSaved, graph, occurredUtc);
+    }
+
+    public void LogExecutionStarted(
+        GraphEventData graph,
+        DateTimeOffset? occurredUtc = null)
+    {
+        LogEvent(TelemetryEventTypes.ExecutionStarted, graph, occurredUtc);
+    }
+
+    public void LogExecutionEnded(
+        GraphEventData graph,
+        bool evaluationTookPlace,
         bool successful,
-        DateTimeOffset occurredUtc)
+        DateTimeOffset? occurredUtc = null)
     {
         LogEvent(
-            TelemetryEventTypes.GraphExecutionCompleted,
-            new ExecutionCompletedData
+            TelemetryEventTypes.ExecutionEnded,
+            new ExecutionEndedData
             {
-                NodeCount = nodeCount,
+                Graph = graph,
+                EvaluationTookPlace = evaluationTookPlace,
                 Successful = successful
             },
             occurredUtc);
-    }
-
-    public void LogNodeChanged(string eventType, int nodeCount)
-    {
-        LogEvent(eventType, new NodeCountData { NodeCount = nodeCount });
-    }
-
-    public void LogExtensionError()
-    {
-        LogEvent(TelemetryEventTypes.ExtensionError);
     }
 
     public void EndSession()
@@ -112,7 +119,6 @@ public sealed class GovernanceService : IDisposable
 
     private void LogEvent(
         string eventType,
-        object? data = null,
         DateTimeOffset? occurredUtc = null)
     {
         if (_logger is null || Volatile.Read(ref _sessionStarted) == 0 || Volatile.Read(ref _disposed) != 0)
@@ -123,6 +129,31 @@ public sealed class GovernanceService : IDisposable
         try
         {
             _logger.Log(new TelemetryRecord
+            {
+                Event = eventType,
+                SessionId = _currentSessionId,
+                OccurredUtc = occurredUtc ?? DateTimeOffset.UtcNow
+            });
+        }
+        catch
+        {
+        }
+    }
+
+    private void LogEvent<TPayload>(
+        string eventType,
+        TPayload data,
+        DateTimeOffset? occurredUtc = null)
+        where TPayload : class
+    {
+        if (_logger is null || Volatile.Read(ref _sessionStarted) == 0 || Volatile.Read(ref _disposed) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            _logger.Log(new TelemetryRecord<TPayload>
             {
                 Event = eventType,
                 SessionId = _currentSessionId,
