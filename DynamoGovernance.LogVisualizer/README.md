@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`index.html` is a self-contained, read-only dashboard for Dynamo Governance telemetry logs. It is intentionally implemented as one HTML file with inline CSS and JavaScript so that it can be opened directly in a browser without building the .NET solution, installing dependencies, or running a local web server.
+This directory contains a static, read-only dashboard for Dynamo Governance telemetry logs. `index.html` loads the adjacent `styles.css` and `app.js` files, so keep all three files together. It can be opened directly in a browser without building the .NET solution, installing dependencies, or running a local web server.
 
 All selected files are processed in the browser. The visualizer does not upload telemetry or make network requests.
 
@@ -10,7 +10,7 @@ All selected files are processed in the browser. The visualizer does not upload 
 
 1. Build and deploy the Dynamo Governance extension.
 2. Start Dynamo and open, save, run, or close one or more `.dyn` graphs.
-3. Open `index.html` in Microsoft Edge or Google Chrome.
+3. Open `DynamoGovernance.LogVisualizer/index.html` in Microsoft Edge or Google Chrome. Do not move it away from `styles.css` and `app.js`.
 4. Select **Select log folder**.
 5. In the folder picker, select:
 
@@ -24,8 +24,8 @@ The browser requires the user to select the folder because a local HTML file can
 
 ## Design decisions
 
-- The dashboard is a single static `index.html` file.
-- CSS and JavaScript are inline by design.
+- The dashboard consists of static `index.html`, `styles.css`, and `app.js` files.
+- There is no bundling or generated frontend output; the HTML references the CSS and JavaScript files directly.
 - There is no ASP.NET project, backend, database, package manager, or frontend build step.
 - Telemetry files are selected with an HTML directory input using `webkitdirectory`.
 - The page reads all selected files whose names end in `.jsonl`.
@@ -213,7 +213,7 @@ When changing telemetry:
 1. Keep the common envelope fields stable.
 2. Add new payload properties as optional where possible.
 3. Keep JSON property names in snake case.
-4. Update this README and `index.html` together.
+4. Update this README and the relevant visualizer source files together.
 5. Ensure old records without new fields still render.
 6. Never use `innerHTML` with telemetry values.
 7. Count malformed lines but continue processing the file.
@@ -223,9 +223,9 @@ The parser currently recognizes the event names listed above. Unknown event name
 
 ## Validation
 
-After modifying `index.html`:
+After modifying `index.html`, `styles.css`, or `app.js`:
 
-1. Extract the inline script and run a JavaScript syntax check.
+1. Run a JavaScript syntax check on `app.js` (for example, `node --check app.js` when Node.js is available).
 2. Open the page in Edge or Chrome.
 3. Confirm the empty dashboard renders before files are selected.
 4. Load a folder containing valid and malformed JSONL lines.

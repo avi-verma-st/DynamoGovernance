@@ -1,77 +1,134 @@
-# Architecture
+# Architecture and Telemetry Schema
 
 ## Overview
 
-Dynamo Governance is a .NET 8 package for Dynamo 3.x with two independently loaded extensions:
+Dynamo Governance is a .NET 8 package for Dynamo 3.x with two independently discovered extensions:
 
-- `GovernanceTelemetryExtension` observes Dynamo lifecycle, node changes, and graph evaluations.
-- `GovernanceViewExtension` supplies the WPF resource sidebar.
+- `GovernanceTelemetryExtension` implements Dynamo `IExtension` and observes sessions, `.dyn` graph lifecycle events, and graph evaluations.
+- `GovernanceViewExtension` implements Dynamo `IViewExtension` and supplies the WPF resource sidebar and launch menu.
 
-Telemetry uses a minimal schema `2.0`. A `session.started` record stores identity and application context once. Every later record references that session with `session_id` and contains only event-specific data.
+`DynamoGovernance.Core` is shared by the telemetry extension and defines the serialized models, identity and application context, event service, bounded queue, and local JSONL writer. The view extension references the core project but does not currently emit telemetry.
 
-## Projects
-
-- `DynamoGovernance.Core` — schema models, identity collection, event creation, bounded queue, JSON serialization, and local file delivery.
-- `DynamoGovernance.Extension` — Dynamo `IExtension` lifecycle and workspace event subscriptions.
-- `DynamoGovernance.ViewExtension` — Dynamo `IViewExtension`, menu registration, sidebar, and browser links.
-
-## Telemetry record
-
-Every record has:
-
-- `schema_version`
-- `event`
-- `session_id`
-- `occurred_utc`
-- Optional `data`
-
-No event IDs, sequence numbers, correlation objects, result envelopes, telemetry-production metadata, or repeated identity/application objects are generated.
-
-## Session flow
+## Session lifecycle
 
 1. Dynamo calls `GovernanceTelemetryExtension.Startup`.
-2. `GovernanceService` creates a random `session_id`.
-3. Windows identity and host/runtime context are captured.
-4. One `session.started` record stores that context.
-5. Later records carry the same `session_id` but do not repeat context.
-6. `session.ended` is emitted once during shutdown or disposal.
+2. `GovernanceService` reads the Windows account and machine name and creates the logger.
+3. The extension derives Dynamo, host-process, extension, architecture, and runtime details.
+4. `StartSession` creates a random `session_id` and queues one `session.started` record.
+5. Every subsequent record uses that session ID without repeating identity or application context.
+6. `Shutdown` requests `session.ended`; `Dispose` also ends the session if necessary and disposes the logger.
 
-## Dynamo event integration
+Failures are intentionally swallowed at extension and logging boundaries so telemetry cannot crash Dynamo. This also means logging failures are not surfaced in the Dynamo UI.
 
-`Ready` subscribes existing, current, and newly opened workspaces.
+## Workspace lifecycle
 
-- `WorkspaceModel.NodeAdded` emits `node.added` with current `node_count`.
-- `WorkspaceModel.NodeRemoved` emits `node.removed` with current `node_count`.
-- `HomeWorkspaceModel.EvaluationStarted` emits `graph.execution.started` with current `node_count`.
-- `HomeWorkspaceModel.EvaluationCompleted` emits `graph.execution.completed` with current `node_count` and `successful`.
+During `Ready`, the extension subscribes existing home workspaces, the current home workspace, and future workspace-open/change/remove events. Only `HomeWorkspaceModel` instances (`.dyn` documents) are observed; `CustomNodeWorkspaceModel` (`.dyf`) editing is excluded.
 
-`successful` is `true` only when Dynamo reports that evaluation took place and succeeded. No graph identity, graph name, node identity, node type, package, issue, exception, run mode, trigger, duration, or diagnostic text is collected.
+Each subscribed workspace receives a graph ID. Dynamo's workspace GUID is used when available; otherwise a random GUID is generated. A graph snapshot is emitted as follows:
 
-Subscriptions are removed when a workspace is removed and during shutdown/disposal.
+- `graph.opened` when a home workspace is first subscribed or a different document is detected in a reused workspace.
+- `graph.saved` when Dynamo raises the workspace `Saved` event.
+- `graph.closed` when workspace removal starts, a different document replaces it, or the extension unsubscribes during shutdown/disposal.
+- `execution.started` and `execution.ended` after an evaluation completion for which `EvaluationTookPlace` is `true`.
 
-## Logger flow
+The evaluation-start timestamp is captured when `EvaluationStarted` fires. The `execution.started` record is queued when completion is processed but uses the captured start timestamp. No execution events are written when Dynamo reports that evaluation did not take place. `execution.ended.data.successful` comes from `EvaluationSucceeded`.
 
-1. `GovernanceService` creates a `TelemetryRecord`.
-2. `TelemetryLogger.Log` uses `ChannelWriter.TryWrite`.
-3. A single background worker serializes each event with `System.Text.Json`.
-4. The worker appends one event per line to the daily JSONL file.
+Node add/remove events are not logged individually. The current node count is included in each graph snapshot.
 
-The queue holds 1,024 records. Full queues drop new records rather than blocking Dynamo. Shutdown performs a best-effort flush for 200 milliseconds. Logging failures are isolated from the host.
+## Graph and package collection
+
+A graph snapshot contains:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `graph_id` | GUID | Workspace GUID when available, otherwise a generated ID for the observed document. |
+| `name` | string | Dynamo workspace name, or `Untitled` when unavailable. |
+| `file_path` | string or omitted | Full workspace file path when available. |
+| `file_size_bytes` | integer or omitted | Current on-disk file size when the path can be read. |
+| `is_saved` | boolean | `true` when a file path is present. |
+| `has_unsaved_changes` | boolean | Current Dynamo dirty-state flag. |
+| `node_count` | integer | Current number of nodes in the workspace. |
+| `packages` | array | Package dependencies associated with nodes in this graph. |
+
+Package discovery is graph-scoped; it does not enumerate every installed Dynamo package. Because the relevant Dynamo 3.0.3 dependency API is not public, `GetPackages` uses guarded reflection to call `ComputeNodeLibraryDependencies` or read `NodeLibraryDependencies`. It retains package dependencies, counts their associated graph nodes, and searches up to eight parent directories from the dependency path for a matching `pkg.json`.
+
+Package records contain `name`, optional `version`, `node_count`, and optional `description`, `license`, `repository_url`, and `site_url`. Dependencies with the same name and version are grouped and their node counts are summed. Reflection, file-system, or manifest errors result in an empty or partially enriched package list rather than an extension failure.
+
+## Common record envelope
+
+Every JSONL record contains:
+
+| Property | Type | Required | Description |
+| --- | --- | --- | --- |
+| `event` | string | Yes | Event type. |
+| `session_id` | GUID | Yes | Correlates records generated by one loaded extension session. |
+| `occurred_utc` | ISO 8601 timestamp | Yes | UTC occurrence time. |
+| `data` | object | Event-dependent | Strongly typed payload. |
+
+The current implementation does **not** serialize `schema_version`, event IDs, sequence numbers, or a separate correlation envelope.
+
+## Event catalog
+
+| Event | Payload |
+| --- | --- |
+| `session.started` | Identity and application context. |
+| `session.ended` | No `data` property. |
+| `graph.opened` | Graph snapshot. |
+| `graph.closed` | Graph snapshot. |
+| `graph.saved` | Graph snapshot. |
+| `execution.started` | Graph snapshot. |
+| `execution.ended` | Graph snapshot plus `evaluation_took_place` and `successful`. |
+
+### `session.started` payload
+
+The identity object contains:
+
+- `user_id`: `DOMAIN\\username`, or `unknown` if collection fails.
+- `user_id_source`: `windows_account`.
+- `machine_id`: Windows machine name, or `unknown` if collection fails.
+- `machine_id_source`: `machine_name`.
+- `machine_id_collected`: `true`.
+- `identifiers_protected`: `false`.
+
+The application object contains `host_name`, optional `host_version`, `dynamo_version`, `extension_version`, `process_id`, `process_architecture`, and `runtime_version`. Host information comes from the current process, so names and version formats vary by Dynamo host.
+
+### `execution.ended` payload
+
+`execution.ended.data` contains:
+
+- `graph`: the graph snapshot at completion.
+- `evaluation_took_place`: currently always `true` because events where it is false are filtered out.
+- `successful`: Dynamo's evaluation success result.
+
+## Logger flow and failure behavior
+
+1. `GovernanceService` creates a `TelemetryRecord` or `TelemetryRecord<TPayload>`.
+2. `TelemetryLogger.Log` calls `ChannelWriter.TryWrite` and immediately returns.
+3. A single background worker serializes records with `System.Text.Json` and omits null properties.
+4. The worker appends one compact object per line to `%LOCALAPPDATA%\DynamoGovernance\Logs\telemetry_yyyy-MM-dd.jsonl`.
+
+The bounded channel holds 1,024 records. Although its full mode is configured as `Wait`, producers use only `TryWrite`; a full queue therefore drops the new record and increments an internal counter. Serialization and file failures also increment that counter. The count is not currently exposed outside `TelemetryLogger`.
+
+During disposal, the writer is completed and given 200 milliseconds to drain before cancellation. Shutdown is best effort, so abrupt host termination or a large backlog can leave a session without `session.ended` or discard queued records.
 
 ## View-extension flow
 
-1. Dynamo loads `GovernanceViewExtension` from its manifest.
+1. Dynamo loads `GovernanceViewExtension` from the view-extension manifest.
 2. `Loaded` adds `Extensions > Dynamo Governance > Launch`.
-3. The extension opens `GovernanceView` in Dynamo's extension sidebar.
-4. Resource buttons open approved SharePoint destinations in the default browser.
-5. Closing the sidebar does not unload the extension; the menu command reopens it.
+3. The extension immediately adds a `GovernanceView` to Dynamo's extension sidebar.
+4. Resource actions open fixed SharePoint URLs in the default browser.
+5. Closing the sidebar does not unload the extension; the menu command adds the view again.
 
-The view extension does not emit telemetry.
+The links require suitable SharePoint access and network connectivity. The view extension does not read or display telemetry.
 
-## Identity profile
+## Privacy and security considerations
 
-The session-start record currently stores plain-text `DOMAIN\\username` and Windows machine name. `identifiers_protected` remains `false`. Identity is no longer repeated on every event, but it remains linkable to all events carrying the same `session_id`.
+Telemetry is stored locally, but it is not anonymous. It includes plain-text user and machine identifiers and can include graph names, complete paths, file sizes, and package metadata. The shared `session_id` makes all records in a session linkable to its identity record. The local dashboard displays those values as recorded.
 
-## Schema evolution
+The extension does not collect node values, node-level IDs or types, exception messages, or stack traces. Before production use, define who can access or aggregate the files, how long they are retained, whether identifiers and paths require protection, and how users are notified.
 
-Schema `2.0` is a breaking replacement for the previous universal envelope. Any future field collection must be documented in the schema/security review. Breaking record changes require a new major schema version.
+## Compatibility and schema changes
+
+The projects target .NET 8 and compile against Dynamo `3.0.3.7597`. Package discovery depends on reflected Dynamo implementation details and must be retested when the Dynamo dependency changes.
+
+When changing telemetry, update the models, extension integration, this document, and the log visualizer together. Prefer additive optional fields. Treat renamed or removed fields and changed event semantics as breaking changes, and introduce an explicit version field before claiming a versioned wire schema.
