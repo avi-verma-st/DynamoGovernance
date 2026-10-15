@@ -18,7 +18,7 @@
 
   <Target Name="DeployViewExtension" AfterTargets="Build">
     <PropertyGroup>
-      <DynamoPackageDirectory>C:\DynamoDev\packages\DynamoGovernance</DynamoPackageDirectory>
+      <DynamoPackageDirectory Condition="'$(DynamoPackageDirectory)' == ''">C:\DynamoDev\packages\DynamoGovernance</DynamoPackageDirectory>
     </PropertyGroup>
 
     <MakeDir Directories="$(DynamoPackageDirectory)\bin" />
@@ -31,6 +31,32 @@
           Condition="Exists('$(TargetDir)$(TargetName).pdb')" />
     <Copy SourceFiles="$(MSBuildProjectDirectory)\..\DeploymentFiles\DynamoGovernance_ViewExtensionDefinition.xml"
           DestinationFolder="$(DynamoPackageDirectory)\extra" />
+  </Target>
+
+  <Target Name="ValidateViewExtensionDeployment"
+          AfterTargets="DeployViewExtension">
+    <PropertyGroup>
+      <ViewExtensionAssemblyFile>$(DynamoPackageDirectory)\bin\DynamoGovernance.ViewExtension.dll</ViewExtensionAssemblyFile>
+      <ViewExtensionManifestFile>$(DynamoPackageDirectory)\extra\DynamoGovernance_ViewExtensionDefinition.xml</ViewExtensionManifestFile>
+    </PropertyGroup>
+
+    <Error Condition="!Exists('$(ViewExtensionAssemblyFile)')"
+           Text="Deployment validation failed: missing $(ViewExtensionAssemblyFile)" />
+    <Error Condition="!Exists('$(ViewExtensionManifestFile)')"
+           Text="Deployment validation failed: missing $(ViewExtensionManifestFile)" />
+
+    <XmlPeek XmlInputPath="$(ViewExtensionManifestFile)"
+             Query="/ViewExtensionDefinition/AssemblyPath/text()"
+             Condition="Exists('$(ViewExtensionManifestFile)')">
+      <Output TaskParameter="Result"
+              PropertyName="DeployedViewExtensionAssemblyPath" />
+    </XmlPeek>
+
+    <Error Condition="'$(DeployedViewExtensionAssemblyPath)' != '..\bin\DynamoGovernance.ViewExtension.dll'"
+           Text="Deployment validation failed: View Extension manifest AssemblyPath is '$(DeployedViewExtensionAssemblyPath)'; expected '..\bin\DynamoGovernance.ViewExtension.dll'." />
+
+    <Message Text="View Extension deployment validation succeeded: $(DynamoPackageDirectory)"
+             Importance="high" />
   </Target>
 
 </Project>
