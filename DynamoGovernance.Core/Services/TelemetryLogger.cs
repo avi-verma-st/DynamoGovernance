@@ -17,9 +17,9 @@ public sealed class TelemetryLogger : IDisposable
     private int _disposed;
     private long _droppedRecordCount;
 
-    public TelemetryLogger(string? logDirectory = null)
+    public TelemetryLogger()
     {
-        _logDirectory = logDirectory ?? Path.Combine(
+        _logDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "DynamoGovernance",
             "Logs");

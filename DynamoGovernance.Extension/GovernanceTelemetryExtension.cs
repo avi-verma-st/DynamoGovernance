@@ -7,14 +7,20 @@ using System.Linq;
 using Dynamo.Extensions;
 using Dynamo.Graph.Workspaces;
 using Dynamo.Models;
+using Dynamo.Logging;
 
 using DynamoGovernance.Core.Models;
 using DynamoGovernance.Core.Services;
 
 namespace DynamoGovernance.Extension;
 
-public sealed class GovernanceTelemetryExtension : IExtension
+public sealed class GovernanceTelemetryExtension : LogSourceBase,IExtension
 {
+    private readonly ILogger _dynamoLogger;
+    public GovernanceTelemetryExtension()
+    {
+        _dynamoLogger = AsLogger();
+    }
     private readonly object _subscriptionLock = new();
 
     private readonly Dictionary<HomeWorkspaceModel, WorkspaceSubscription>

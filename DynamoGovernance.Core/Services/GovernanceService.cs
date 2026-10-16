@@ -5,15 +5,17 @@ namespace DynamoGovernance.Core.Services;
 
 public sealed class GovernanceService : IDisposable
 {
+    private readonly object _lifecycleLock = new();
     private readonly TelemetryLogger? _logger;
     private readonly IdentityContext _identity;
     private ApplicationContext _application;
+    private readonly DiagnosticLogger _diagnosticLogger = new();
     private Guid _currentSessionId;
-    private int _sessionStarted;
-    private int _sessionEnded;
-    private int _disposed;
+    private bool _sessionStarted;
+    private bool _sessionEnded;
+    private bool _disposed;
 
-    public GovernanceService(string? logDirectory = null)
+    public GovernanceService()
     {
         _identity = new IdentityContext
         {
@@ -26,10 +28,11 @@ public sealed class GovernanceService : IDisposable
 
         try
         {
-            _logger = new TelemetryLogger(logDirectory);
+            _logger = new TelemetryLogger();
         }
-        catch
+        catch (Exception ex)
         {
+            _diagnosticLogger.LogError(nameof(GovernanceService), "Initiating Telemetry Logger", ex);
             _logger = null;
         }
     }
@@ -40,26 +43,29 @@ public sealed class GovernanceService : IDisposable
         string? hostVersion,
         string extensionVersion)
     {
-        if (_logger is null || Interlocked.CompareExchange(ref _sessionStarted, 1, 0) != 0)
+        lock (_lifecycleLock)
         {
-            return;
-        }
 
-        _currentSessionId = Guid.NewGuid();
-        Volatile.Write(ref _sessionEnded, 0);
-        _application = CreateApplicationContext(
-            hostName,
-            hostVersion,
-            dynamoVersion,
-            extensionVersion);
-
-        LogEvent(
-            TelemetryEventTypes.SessionStarted,
-            new SessionStartedData
+            if (_logger is null || _sessionStarted || _disposed)
             {
-                Identity = _identity,
-                Application = _application
-            });
+                return;
+            }
+
+            _currentSessionId = Guid.NewGuid();
+            _application = CreateApplicationContext(
+                hostName,
+                hostVersion,
+                dynamoVersion,
+                extensionVersion);
+            _sessionStarted = true;
+            LogEvent(
+                TelemetryEventTypes.SessionStarted,
+                new SessionStartedData
+                {
+                    Identity = _identity,
+                    Application = _application
+                });
+        }
     }
 
     public void LogGraphOpened(
@@ -109,11 +115,11 @@ public sealed class GovernanceService : IDisposable
 
     public void EndSession()
     {
-        if (Volatile.Read(ref _sessionStarted) == 0 || Interlocked.Exchange(ref _sessionEnded, 1) != 0)
+        if (!_sessionStarted || _sessionEnded)
         {
             return;
         }
-
+        _sessionEnded = true;
         LogEvent(TelemetryEventTypes.SessionEnded);
     }
 
@@ -121,7 +127,7 @@ public sealed class GovernanceService : IDisposable
         string eventType,
         DateTimeOffset? occurredUtc = null)
     {
-        if (_logger is null || Volatile.Read(ref _sessionStarted) == 0 || Volatile.Read(ref _disposed) != 0)
+        if (_logger is null || !_sessionStarted || _disposed)
         {
             return;
         }
@@ -135,8 +141,9 @@ public sealed class GovernanceService : IDisposable
                 OccurredUtc = occurredUtc ?? DateTimeOffset.UtcNow
             });
         }
-        catch
+        catch(Exception ex)
         {
+            _diagnosticLogger.LogError(nameof(GovernanceService), $"Logging Telemetry Event {eventType}", ex);
         }
     }
 
@@ -146,7 +153,7 @@ public sealed class GovernanceService : IDisposable
         DateTimeOffset? occurredUtc = null)
         where TPayload : class
     {
-        if (_logger is null || Volatile.Read(ref _sessionStarted) == 0 || Volatile.Read(ref _disposed) != 0)
+        if (_logger is null || !_sessionStarted || _sessionEnded || _disposed)
         {
             return;
         }
@@ -161,8 +168,9 @@ public sealed class GovernanceService : IDisposable
                 Data = data
             });
         }
-        catch
+        catch (Exception ex)
         {
+            _diagnosticLogger.LogError(nameof(GovernanceService), $"Logging Telemetry Event {eventType}", ex);
         }
     }
 
@@ -198,19 +206,23 @@ public sealed class GovernanceService : IDisposable
 
     public void Dispose()
     {
-        if (Volatile.Read(ref _disposed) != 0)
+        lock (_lifecycleLock)
         {
-            return;
-        }
 
-        try
-        {
-            EndSession();
-            Interlocked.Exchange(ref _disposed, 1);
-            _logger?.Dispose();
-        }
-        catch
-        {
+            if (_disposed)
+            {
+                return;
+            }
+                EndSession();
+                _disposed = true;
+            try
+            {
+                _logger?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _diagnosticLogger.LogError(nameof(GovernanceService), "Disposing Governance Service", ex);
+            }
         }
     }
 }
