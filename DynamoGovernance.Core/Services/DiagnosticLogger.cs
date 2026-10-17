@@ -4,7 +4,7 @@ using System.Text;
 
 namespace DynamoGovernance.Core.Services
 {
-    internal class DiagnosticLogger
+    public class DiagnosticLogger
     {
         private readonly object _writeLock = new();
         private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
@@ -21,7 +21,7 @@ namespace DynamoGovernance.Core.Services
                     Operation = operation,
                 };
                 string logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DynamoGovernance", "Diagnostics");
-                string logFilePath = Path.Combine(logDirectory,$"diagnostics_{DateTime.UtcNow:yyyyy-MM-dd}.jsonl");
+                string logFilePath = Path.Combine(logDirectory,$"diagnostics_{DateTime.UtcNow:yyyy-MM-dd}.jsonl");
                 string json = JsonSerializer.Serialize(record,_jsonOptions);
                 lock (_writeLock)
                 {
@@ -32,7 +32,7 @@ namespace DynamoGovernance.Core.Services
             }
             catch
             {
-
+                //This will not have any failure safety as this is the last level of logging or consuming an error
             }
         }
         private class DiagnosticRecord

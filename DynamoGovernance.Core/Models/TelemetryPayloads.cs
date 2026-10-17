@@ -25,12 +25,6 @@ public sealed class GraphEventData
     [JsonPropertyName("file_size_bytes")]
     public long? FileSizeBytes { get; init; }
 
-    [JsonPropertyName("is_saved")]
-    public bool IsSaved { get; init; }
-
-    [JsonPropertyName("has_unsaved_changes")]
-    public bool HasUnsavedChanges { get; init; }
-
     [JsonPropertyName("node_count")]
     public int NodeCount { get; init; }
 
@@ -61,9 +55,19 @@ public sealed class PackageReferenceData
     [JsonPropertyName("site_url")]
     public string? SiteUrl { get; init; }
 }
+public sealed class ExecutionStartedData
+{
+    [JsonPropertyName("execution_id")]
+    public Guid ExecutionId { get; init; }
+
+    [JsonPropertyName("graph_id")]
+    public Guid GraphId { get; init; }
+}
 
 public sealed class ExecutionEndedData
 {
+    [JsonPropertyName("execution_id")]
+    public Guid ExecutionId { get; init; }
     [JsonPropertyName("graph")]
     public required GraphEventData Graph { get; init; }
 

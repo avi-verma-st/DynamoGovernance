@@ -90,13 +90,20 @@ public sealed class GovernanceService : IDisposable
     }
 
     public void LogExecutionStarted(
-        GraphEventData graph,
-        DateTimeOffset? occurredUtc = null)
+        Guid executionId,
+        Guid GraphId,
+        DateTimeOffset? occurredUtc=null)
     {
-        LogEvent(TelemetryEventTypes.ExecutionStarted, graph, occurredUtc);
+        LogEvent(TelemetryEventTypes.ExecutionStarted, new ExecutionStartedData
+        {
+            ExecutionId = executionId,
+            GraphId = GraphId
+        },
+        occurredUtc);
     }
 
     public void LogExecutionEnded(
+        Guid executionId,
         GraphEventData graph,
         bool evaluationTookPlace,
         bool successful,
@@ -106,6 +113,7 @@ public sealed class GovernanceService : IDisposable
             TelemetryEventTypes.ExecutionEnded,
             new ExecutionEndedData
             {
+                ExecutionId = executionId,
                 Graph = graph,
                 EvaluationTookPlace = evaluationTookPlace,
                 Successful = successful
@@ -127,7 +135,7 @@ public sealed class GovernanceService : IDisposable
         string eventType,
         DateTimeOffset? occurredUtc = null)
     {
-        if (_logger is null || !_sessionStarted || _disposed)
+        if (_logger is null || !_sessionStarted || _disposed||_sessionEnded)
         {
             return;
         }

@@ -34,18 +34,11 @@
     <MakeDir Directories="$(DynamoPackageDirectory)\bin" />
     <MakeDir Directories="$(DynamoPackageDirectory)\extra" />
 
-    <Copy SourceFiles="$(TargetPath)"
-          DestinationFolder="$(DynamoPackageDirectory)\bin" />
-    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb"
-          DestinationFolder="$(DynamoPackageDirectory)\bin"
-          Condition="Exists('$(TargetDir)$(TargetName).pdb')" />
-    <Copy SourceFiles="$(TargetDir)DynamoGovernance.Core.dll"
-          DestinationFolder="$(DynamoPackageDirectory)\bin" />
-    <Copy SourceFiles="$(TargetDir)DynamoGovernance.Core.pdb"
-          DestinationFolder="$(DynamoPackageDirectory)\bin"
-          Condition="Exists('$(TargetDir)DynamoGovernance.Core.pdb')" />
-    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\DeploymentFiles\DynamoGovernance_ExtensionDefinition.xml"
-          DestinationFolder="$(DynamoPackageDirectory)\extra" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DynamoPackageDirectory)\bin" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(DynamoPackageDirectory)\bin" Condition="Exists('$(TargetDir)$(TargetName).pdb')" />
+    <Copy SourceFiles="$(TargetDir)DynamoGovernance.Core.dll" DestinationFolder="$(DynamoPackageDirectory)\bin" />
+    <Copy SourceFiles="$(TargetDir)DynamoGovernance.Core.pdb" DestinationFolder="$(DynamoPackageDirectory)\bin" Condition="Exists('$(TargetDir)DynamoGovernance.Core.pdb')" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\DeploymentFiles\DynamoGovernance_ExtensionDefinition.xml" DestinationFolder="$(DynamoPackageDirectory)\extra" />
   </Target>
 
 </Project>
