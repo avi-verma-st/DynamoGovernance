@@ -8,13 +8,16 @@ public sealed class TelemetryLogger : IDisposable
 {
     private const int QueueCapacity = 1024;
     private static readonly TimeSpan ShutdownFlushTimeout = TimeSpan.FromMilliseconds(200);
+    private readonly DiagnosticLogger _diagnosticLogger = new();
 
     private readonly string _logDirectory;
     private readonly Channel<object> _queue;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly Task _writerTask;
-    private int _disposed;
+    private readonly object _stateLock = new();
+
+    private bool _disposed;
     private long _droppedRecordCount;
 
     public TelemetryLogger()
@@ -40,32 +43,24 @@ public sealed class TelemetryLogger : IDisposable
 
         _writerTask = Task.Run(ProcessQueueAsync);
     }
-
-    public long DroppedRecordCount => Interlocked.Read(ref _droppedRecordCount);
-
     public bool Log<T>(T telemetryEvent) where T : class
     {
-        if (Volatile.Read(ref _disposed) != 0)
+        lock (_stateLock)
         {
-            return false;
+            if (_disposed) return false;
+
+            bool queued = _queue.Writer.TryWrite(telemetryEvent);
+            if (!queued)
+            {
+                _droppedRecordCount++;
+            }
+            return queued;
         }
-
-        bool queued = _queue.Writer.TryWrite(telemetryEvent);
-        if (!queued)
-        {
-            Interlocked.Increment(ref _droppedRecordCount);
-        }
-
-        return queued;
     }
-
-    public Task<bool> LogAsync<T>(T telemetryEvent) where T : class
-    {
-        return Task.FromResult(Log(telemetryEvent));
-    }
-
     private async Task ProcessQueueAsync()
     {
+        bool stoppedEarly = false;
+
         try
         {
             Directory.CreateDirectory(_logDirectory);
@@ -88,37 +83,130 @@ public sealed class TelemetryLogger : IDisposable
                         jsonLine + Environment.NewLine,
                         _cancellationTokenSource.Token);
                 }
+                catch (OperationCanceledException) when (_cancellationTokenSource.IsCancellationRequested)
+                {
+                    IncrementDroppedRecordCount();
+                    throw;
+                }
                 catch
                 {
-                    Interlocked.Increment(ref _droppedRecordCount);
+                    IncrementDroppedRecordCount();
                 }
             }
         }
-        catch
+        catch (OperationCanceledException) when (_cancellationTokenSource.IsCancellationRequested)
         {
+            stoppedEarly = true;
+        }
+        catch (Exception ex)
+        {
+            stoppedEarly = true;
+            _queue.Writer.TryComplete(ex);
+            _diagnosticLogger.LogError(
+                nameof(TelemetryLogger),
+                nameof(ProcessQueueAsync),
+                ex);
+        }
+        finally
+        {
+            if (stoppedEarly)
+            {
+                CountRemainingQueuedRecordsAsDropped();
+            }
+        }
+    }
+
+    private void CountRemainingQueuedRecordsAsDropped()
+    {
+        long remainingRecordCount = 0;
+
+        while (_queue.Reader.TryRead(out _))
+        {
+            remainingRecordCount++;
+        }
+
+        if (remainingRecordCount == 0)
+        {
+            return;
+        }
+
+        lock (_stateLock)
+        {
+            _droppedRecordCount += remainingRecordCount;
+        }
+    }
+
+    private void IncrementDroppedRecordCount()
+    {
+        lock (_stateLock)
+        {
+            _droppedRecordCount++;
         }
     }
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        lock (_stateLock)
         {
-            return;
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            _queue.Writer.TryComplete();
         }
+
+        bool queueFlushed = false;
 
         try
         {
-            _queue.Writer.TryComplete();
-            if (!_writerTask.Wait(ShutdownFlushTimeout))
+            queueFlushed = _writerTask.Wait(ShutdownFlushTimeout);
+
+            if (!queueFlushed)
             {
                 _cancellationTokenSource.Cancel();
+                _writerTask.GetAwaiter().GetResult();
             }
         }
-        catch
+        catch (Exception ex)
         {
+            _diagnosticLogger.LogError(
+                nameof(TelemetryLogger),
+                nameof(Dispose),
+                ex);
         }
         finally
         {
+            if (!_writerTask.IsCompleted)
+            {
+                try
+                {
+                    _cancellationTokenSource.Cancel();
+                    _writerTask.GetAwaiter().GetResult();
+                }
+                catch (Exception ex)
+                {
+                    _diagnosticLogger.LogError(
+                        nameof(TelemetryLogger),
+                        "Stopping Queue Writer",
+                        ex);
+                }
+            }
+
+            long droppedRecordCount;
+
+            lock (_stateLock)
+            {
+                droppedRecordCount = _droppedRecordCount;
+            }
+
+            _diagnosticLogger.LogInformation(
+                nameof(TelemetryLogger),
+                nameof(Dispose),
+                $"Telemetry logging stopped. Queue flushed: {queueFlushed}. " +
+                $"Dropped record count: {droppedRecordCount}.");
+
             _cancellationTokenSource.Dispose();
         }
     }

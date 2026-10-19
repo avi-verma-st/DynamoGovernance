@@ -26,6 +26,7 @@ function newState() {
         invalid: 0,
         graphOpens: 0,
         runs: 0,
+        skippedRuns: 0,
         successfulRuns: 0,
         lastActivity: null
     };
@@ -102,6 +103,7 @@ function processRecord(record, state) {
             extension: "Unknown",
             graphs: 0,
             runs: 0,
+            skippedRuns: 0,
             graphDetails: new Map(),
             packages: new Map(),
             events: [],
@@ -173,6 +175,12 @@ function processRecord(record, state) {
             break;
         }
         case "execution.ended":
+            if (record.data?.evaluation_took_place === false) {
+                session.skippedRuns++;
+                state.skippedRuns++;
+                break;
+            }
+
             session.runs++;
             state.runs++;
             if (record.data?.successful === true) state.successfulRuns++;
@@ -188,6 +196,7 @@ function render(state) {
     setText("graphCount", numberFormatter.format(state.graphOpens));
     setText("runCount", numberFormatter.format(state.runs));
     setText("successRate", `${state.runs ? (state.successfulRuns * 100 / state.runs).toFixed(1).replace(".0", "") : 0}%`);
+    setText("skippedRunCount", numberFormatter.format(state.skippedRuns));
     setText("packageCount", numberFormatter.format(state.packages.size));
     setText("fileCount", numberFormatter.format(state.files));
     setText("validCount", numberFormatter.format(state.valid));
@@ -362,6 +371,7 @@ function aggregateSessionData(sessionEvents) {
 
     let graphsOpened = 0;
     let executions = 0;
+    let skippedExecutions = 0;
     let startTime = null;
     let endTime = null;
     let summaryLocation = null;
@@ -386,7 +396,13 @@ function aggregateSessionData(sessionEvents) {
         }
 
         if (record.event === "graph.opened") graphsOpened++;
-        if (record.event === "execution.ended" || record.event === "graph.execution.completed") executions++;
+        if (record.event === "execution.ended" || record.event === "graph.execution.completed") {
+            if (record.data?.evaluation_took_place === false) {
+                skippedExecutions++;
+            } else {
+                executions++;
+            }
+        }
 
         const graphIdentity = resolveGraphIdentity(record, graphData) || deriveGraphFallbackKey(record, graphData, recentGraphKeys);
         if (graphIdentity) {
@@ -406,13 +422,16 @@ function aggregateSessionData(sessionEvents) {
             };
 
             if (record.event === "graph.opened" || record.event === "graph.saved") {
-                recentGraphKeys.set(deriveGraphSignature(record, graphData), graphKey);
+                const signature = deriveGraphSignature(record, graphData);
+                if (signature) recentGraphKeys.set(signature, graphKey);
             }
 
             const candidateName = resolveGraphName(graphData, record.data, record);
             const candidatePath = resolveGraphPath(graphData, record.data);
             const candidateNodeCount = resolveGraphNodeCount(graphData, record.data);
-            const candidateSaved = resolveGraphSaved(graphData, record.data);
+            const explicitSaved = resolveGraphSaved(graphData, record.data);
+            const candidateSaved = record.event === "graph.saved" || explicitSaved === true || (explicitSaved == null && candidatePath !== "Not saved");
+            const meaningfulSnapshot = hasMeaningfulGraphSnapshot(graphData);
             const candidateLocation = firstDefinedString(record.data?.file_path, graphData.file_path, record.data?.location, graphData.location, record.data?.path, graphData.path);
             const candidateFileSize = firstDefinedNumber(record.data?.file_size_bytes, graphData.file_size_bytes, record.data?.file_size, graphData.file_size, record.data?.size_bytes, graphData.size_bytes);
 
@@ -425,16 +444,12 @@ function aggregateSessionData(sessionEvents) {
                 existing.name = candidateName || existing.name || "Untitled graph";
             }
             if (candidateNodeCount != null) {
-                const shouldKeepExistingNodeCount = candidateNodeCount === 0 && existing.nodes != null && existing.nodes > 0 && existing.path && existing.path !== "Not saved";
+                const shouldKeepExistingNodeCount = candidateNodeCount === 0 && !meaningfulSnapshot && existing.nodes != null;
                 if (!shouldKeepExistingNodeCount) {
                     existing.nodes = candidateNodeCount;
                 }
             }
-            if (candidateSaved === true) {
-                existing.saved = true;
-            } else if (candidateSaved === false && existing.saved !== true) {
-                existing.saved = false;
-            }
+            if (candidateSaved) existing.saved = true;
             if (candidateLocation) existing.location = candidateLocation;
             if (candidateFileSize != null) existing.fileSize = candidateFileSize;
             if (occurred) {
@@ -442,7 +457,7 @@ function aggregateSessionData(sessionEvents) {
                 if (!existing.endedAt || occurred > existing.endedAt) existing.endedAt = occurred;
             }
 
-            if (record.event === "execution.ended" || record.event === "graph.execution.completed") {
+            if ((record.event === "execution.ended" || record.event === "graph.execution.completed") && record.data?.evaluation_took_place !== false) {
                 existing.executions += 1;
             }
 
@@ -477,7 +492,9 @@ function aggregateSessionData(sessionEvents) {
         if (startNodeCount != null) summaryStartNodeCount = startNodeCount;
 
         const finalNodeCount = firstDefinedNumber(record.data?.final_node_count, graphData.final_node_count, record.data?.finalNodeCount, graphData.finalNodeCount, graphData.node_count, record.data?.node_count);
-        if (finalNodeCount != null) summaryFinalNodeCount = finalNodeCount;
+        if (finalNodeCount != null && (finalNodeCount !== 0 || hasMeaningfulGraphSnapshot(graphData) || summaryFinalNodeCount == null)) {
+            summaryFinalNodeCount = finalNodeCount;
+        }
 
         const counts = parseNodeTypeCounts(record.data || {}, graphData);
         if (counts && (counts.packages != null || counts.custom != null || counts.zeroTouch != null)) {
@@ -521,6 +538,7 @@ function aggregateSessionData(sessionEvents) {
         duration,
         graphsOpened,
         executions,
+        skippedExecutions,
         graphs: orderedGraphs,
         packages: orderedPackages,
         summary: {
@@ -669,7 +687,18 @@ function resolveGraphNodeCount(graphData, data) {
     const packageTotal = sumPackageNodeCounts(graph.packages, fallback.packages, nested.packages);
     if (packageTotal > 0) return packageTotal;
 
-    return direct ?? packageTotal ?? null;
+    return direct ?? packageTotal ?? null
+}
+
+function hasMeaningfulGraphSnapshot(graphData) {
+    const graph = graphData || {};
+    const name = firstDefinedString(graph.name);
+    const path = firstDefinedString(graph.file_path, graph.path, graph.location);
+    const fileSize = firstDefinedNumber(graph.file_size_bytes, graph.file_size, graph.size_bytes);
+    const nodeCount = firstDefinedNumber(graph.node_count, graph.final_node_count, graph.start_node_count);
+    const packages = Array.isArray(graph.packages) ? graph.packages : [];
+
+    return Boolean(name || path || fileSize != null || (nodeCount != null && nodeCount > 0) || packages.length);
 }
 
 function sumPackageNodeCounts(...packageCollections) {
@@ -725,8 +754,8 @@ function isTemporaryHomeGraph(graphData, data) {
 }
 
 function openSessionDialog(session) {
-    const sessionEvents = Array.isArray(session.rawRecords) ? session.rawRecords.slice() : [];
-    const sessionAggregate = aggregateSessionData(sessionEvents);
+    const sessionEvents = Array.isArray(session.rawRecords) ? session.rawRecords : [];
+    let sessionAggregate = aggregateSessionData(sessionEvents);
 
     setText("dialogTitle", session.start ? session.start.toLocaleString() : session.id);
 
@@ -742,7 +771,8 @@ function openSessionDialog(session) {
         ["Extension", session.extension],
         ["Duration", duration],
         ["Graphs opened", sessionAggregate.graphsOpened.toLocaleString()],
-        ["Executions", sessionAggregate.executions.toLocaleString()]
+        ["Executions", sessionAggregate.executions.toLocaleString()],
+        ["Skipped evaluations", sessionAggregate.skippedExecutions.toLocaleString()]
     ];
 
     for (const [label, value] of values) {
@@ -875,6 +905,10 @@ function eventSummary(record, graphName) {
     if (record.event === "session.ended") return "Session ended";
 
     if (record.event === "execution.ended" || record.event === "graph.execution.completed") {
+        if (record.data?.evaluation_took_place === false) {
+            return `${graphName} · Evaluation skipped`;
+        }
+
         const result = record.data?.successful === true ? "Successful" : "Unsuccessful";
         return `${graphName} · ${result}`;
     }
@@ -946,6 +980,7 @@ function mergeNodeTypeCounts(current, incoming) {
 }
 
 function normalizeCount(value) {
+    if (value == null || value === "") return null;
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : null;
 }
@@ -960,6 +995,7 @@ function firstDefinedString(...values) {
 
 function firstDefinedNumber(...values) {
     for (const value of values) {
+        if (value == null || value === "") continue;
         const number = Number(value);
         if (Number.isFinite(number)) return number;
     }

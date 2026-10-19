@@ -2,6 +2,7 @@
 
 
   <PropertyGroup>
+	  <PlatformTarget>x64</PlatformTarget>
     <TargetFramework>net8.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -31,6 +32,9 @@
           Condition="Exists('$(TargetDir)$(TargetName).pdb')" />
     <Copy SourceFiles="$(MSBuildProjectDirectory)\..\DeploymentFiles\DynamoGovernance_ViewExtensionDefinition.xml"
           DestinationFolder="$(DynamoPackageDirectory)\extra" />
+    <Copy
+      SourceFiles="$(MSBuildProjectDirectory)\..\DeploymentFiles\pkg.json"
+      DestinationFolder="$(DynamoPackageDirectory)" />
   </Target>
 
   <Target Name="ValidateViewExtensionDeployment"

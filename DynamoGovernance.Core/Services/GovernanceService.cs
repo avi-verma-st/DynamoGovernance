@@ -20,8 +20,7 @@ public sealed class GovernanceService : IDisposable
         _identity = new IdentityContext
         {
             UserId = GetValueOrUnknown(IdentityService.GetUserId),
-            MachineId = GetValueOrUnknown(IdentityService.GetMachineId),
-            IdentifiersProtected = false
+            MachineId = GetValueOrUnknown(IdentityService.GetMachineId)
         };
 
         _application = CreateApplicationContext("unknown", null, "unknown", "unknown");
@@ -123,12 +122,16 @@ public sealed class GovernanceService : IDisposable
 
     public void EndSession()
     {
-        if (!_sessionStarted || _sessionEnded)
+        lock (_lifecycleLock)
         {
-            return;
+            if (!_sessionStarted || _sessionEnded || _disposed)
+            {
+                return;
+            }
+
+            LogEvent(TelemetryEventTypes.SessionEnded);
+            _sessionEnded = true;
         }
-        _sessionEnded = true;
-        LogEvent(TelemetryEventTypes.SessionEnded);
     }
 
     private void LogEvent(

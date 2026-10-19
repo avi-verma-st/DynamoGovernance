@@ -37,9 +37,6 @@ public sealed class IdentityContext
 
     [JsonPropertyName("machine_id_collected")]
     public bool MachineIdCollected { get; init; } = true;
-
-    [JsonPropertyName("identifiers_protected")]
-    public bool IdentifiersProtected { get; init; }
 }
 
 public sealed class ApplicationContext

@@ -134,7 +134,6 @@ public sealed class GovernanceTelemetryExtension : IExtension
     private void SubscribeWorkspace(
         HomeWorkspaceModel workspace)
     {
-
         WorkspaceSubscription subscription =
             new(
                 CreateGraphEventData(workspace));
@@ -162,22 +161,28 @@ public sealed class GovernanceTelemetryExtension : IExtension
         subscription.EvaluationStarted = evaluationStarted;
         subscription.EvaluationCompleted = evaluationCompleted;
 
+        lock (_subscriptionLock)
+        {
+            if (_subscriptions.ContainsKey(workspace))
+            {
+                return;
+            }
 
-        workspace.EvaluationStarted +=
-            evaluationStarted;
+            _subscriptions.Add(
+                workspace,
+                subscription);
 
-        workspace.EvaluationCompleted +=
-            evaluationCompleted;
+            workspace.EvaluationStarted +=
+                evaluationStarted;
 
-        workspace.Saved += saved;
+            workspace.EvaluationCompleted +=
+                evaluationCompleted;
 
+            workspace.Saved += saved;
 
-        _subscriptions.Add(
-            workspace,
-            subscription);
-
-        _governanceService?.LogGraphOpened(
-            subscription.Snapshot);
+            _governanceService?.LogGraphOpened(
+                subscription.Snapshot);
+        }
     }
     private void UnsubscribeWorkspace(
         HomeWorkspaceModel workspace)
@@ -272,12 +277,25 @@ public sealed class GovernanceTelemetryExtension : IExtension
             GraphEventData liveSnapshot = CreateGraphEventData(
                 workspace);
 
-            subscription.Snapshot = liveSnapshot;
+            if (HasGraphContent(liveSnapshot))
+            {
+                subscription.Snapshot = liveSnapshot;
+            }
 
             _governanceService?.LogGraphClosed(
                 subscription.Snapshot);
         }
     }
+
+    private static bool HasGraphContent(
+        GraphEventData snapshot)
+    {
+        return !string.IsNullOrWhiteSpace(snapshot.Name) ||
+            !string.IsNullOrWhiteSpace(snapshot.FilePath) ||
+            snapshot.NodeCount > 0 ||
+            snapshot.Packages.Count > 0;
+    }
+
     private static GraphEventData CreateGraphEventData(
         HomeWorkspaceModel workspace)
     {
@@ -300,10 +318,25 @@ public sealed class GovernanceTelemetryExtension : IExtension
         {
             Guid executionId = Guid.NewGuid();
             DateTimeOffset occurredUtc = DateTimeOffset.UtcNow;
+            bool executionAlreadyInProgress;
 
             lock (subscription)
             {
-                subscription.ExecutionId = executionId;
+                executionAlreadyInProgress = subscription.ExecutionId.HasValue;
+
+                if (!executionAlreadyInProgress)
+                {
+                    subscription.ExecutionId = executionId;
+                }
+            }
+
+            if (executionAlreadyInProgress)
+            {
+                _diagnosticLogger.LogInformation(
+                    nameof(GovernanceTelemetryExtension),
+                    nameof(CaptureExecutionStarted),
+                    $"Ignored overlapping execution start for graph {subscription.GraphId}.");
+                return;
             }
 
             _governanceService?.LogExecutionStarted(
@@ -324,37 +357,45 @@ public sealed class GovernanceTelemetryExtension : IExtension
         WorkspaceSubscription subscription,
         EvaluationCompletedEventArgs eventArgs)
     {
-        Guid executionId;
+        Guid? executionId;
 
         lock (subscription)
         {
-            executionId =
-                subscription.ExecutionId.GetValueOrDefault();
+            executionId = subscription.ExecutionId;
             subscription.ExecutionId = null;
         }
 
-        if (!eventArgs.EvaluationTookPlace)
+        if (!executionId.HasValue)
         {
+            _diagnosticLogger.LogInformation(
+                nameof(GovernanceTelemetryExtension),
+                nameof(LogExecutionCompleted),
+                $"Ignored execution completion without a matching start for graph {subscription.GraphId}.");
             return;
         }
+
         try
         {
             lock (_subscriptionLock)
             {
-                GraphEventData snapshot = CreateGraphEventData(
-                    workspace);
+                GraphEventData snapshot = eventArgs.EvaluationTookPlace
+                    ? CreateGraphEventData(workspace)
+                    : subscription.Snapshot;
 
                 subscription.Snapshot = snapshot;
                 _governanceService?.LogExecutionEnded(
-                    executionId,
+                    executionId.Value,
                     snapshot,
-                    true,
-                    eventArgs.EvaluationSucceeded);
+                    eventArgs.EvaluationTookPlace,
+                    eventArgs.EvaluationTookPlace && eventArgs.EvaluationSucceeded);
             }
         }
         catch (Exception ex)
         {
-            _diagnosticLogger.LogError(nameof(GovernanceTelemetryExtension), "Failed to log graph execution completed event.", ex);
+            _diagnosticLogger.LogError(
+                nameof(GovernanceTelemetryExtension),
+                "Failed to log graph execution completed event.",
+                ex);
         }
     }
     // INTERNAL RECORDS

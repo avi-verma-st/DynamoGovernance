@@ -85,8 +85,7 @@ Starts a session and provides identity and application context.
       "user_id_source": "windows_account",
       "machine_id": "COMPUTER-NAME",
       "machine_id_source": "machine_name",
-      "machine_id_collected": true,
-      "identifiers_protected": false
+      "machine_id_collected": true
     },
     "application": {
       "host_name": "Revit",
@@ -105,7 +104,7 @@ Starts a session and provides identity and application context.
 
 Ends a session. This event normally has no `data` payload.
 
-### `graph.opened`, `graph.closed`, `graph.saved`, and `execution.started`
+### `graph.opened`, `graph.closed`, and `graph.saved`
 
 These events use a graph payload:
 
@@ -114,10 +113,20 @@ These events use a graph payload:
   "graph_id": "eca26838-edc9-419d-8302-38da98608f19",
   "name": "Example.dyn",
   "file_path": "C:\\Projects\\Example.dyn",
-  "is_saved": true,
-  "has_unsaved_changes": false,
+  "file_size_bytes": 10240,
   "node_count": 24,
   "packages": []
+}
+```
+
+### `execution.started`
+
+This event correlates the execution with its graph:
+
+```json
+{
+  "execution_id": "39cab54d-0042-42d7-88cf-57917c16c6e4",
+  "graph_id": "eca26838-edc9-419d-8302-38da98608f19"
 }
 ```
 
@@ -131,8 +140,7 @@ This event wraps the graph payload and includes execution results:
     "graph_id": "eca26838-edc9-419d-8302-38da98608f19",
     "name": "Example.dyn",
     "file_path": "C:\\Projects\\Example.dyn",
-    "is_saved": true,
-    "has_unsaved_changes": false,
+    "file_size_bytes": 10240,
     "node_count": 24,
     "packages": []
   },
@@ -186,25 +194,27 @@ The overview includes:
 - Completed or started session count
 - Unique users and machines
 - Graph-open count
-- Execution count and success percentage
+- Completed evaluation count and success percentage
+- Skipped-evaluation count, kept separate from failures
 - Unique graph package count
 - Last telemetry activity
 - Fourteen-day session and execution chart
 - Most frequently opened graphs
 - Most frequently observed graph packages
-- Invalid-record and incomplete-session diagnostics
+- Invalid-record, incomplete-session, and skipped-evaluation diagnostics
 
 The session dialog includes:
 
 - Full user and machine identifiers
 - Host, Dynamo, and extension versions
 - Session duration
-- Graph and execution totals
+- Graph, completed-evaluation, and skipped-evaluation totals
 - Package name, version, dependent-node count, description, license, and project link
-- Graph name, complete path, node count, and saved status
-- Chronological event timeline
+- Graph name, complete path, node count, and inferred saved status
 
 A session is considered incomplete if it is missing either `session.started` or `session.ended`. An active Dynamo session will normally appear incomplete until Dynamo closes and writes `session.ended`.
+
+An `execution.ended` record with `evaluation_took_place` set to `false` is shown as a skipped evaluation. It is excluded from execution totals and the success-rate denominator. Empty graph snapshots from older teardown logs do not replace the last meaningful graph name, path, node count, or package list; current logs preserve the last valid graph snapshot before closure.
 
 ## Compatibility and extension guidance
 
