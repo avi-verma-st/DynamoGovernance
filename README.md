@@ -75,6 +75,10 @@ Logs are written to:
 
 Files are grouped by the UTC date at write time. Each non-empty line is an independent JSON record with `event`, `session_id`, and `occurred_utc`; event-specific records also include `data`. The current format does not include a `schema_version` property.
 
+## Telemetry schema comparison
+
+See [Documentation/DYNAMO_GRASSHOPPER_SCHEMA_COMPARISON.md](Documentation/DYNAMO_GRASSHOPPER_SCHEMA_COMPARISON.md) for a comparison of documented current Dynamo telemetry with the supplied Grasshopper log, including additional fields and logging-format differences.
+
 ## Solution structure
 
 - `DynamoGovernance.Core` - telemetry models, identity/application context, event creation, queueing, serialization, and local file output.
