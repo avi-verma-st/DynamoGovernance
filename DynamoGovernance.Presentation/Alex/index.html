@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#FFFFFF">
+  <title>Dynamo Governance | Telemetry, today and next</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&family=Source+Serif+4:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #FFFFFF;
+      --ink: #000000;
+      --muted: #4A4A4A;
+      --line: #C9C4BD;
+      --orange: #ED6631;
+      --fern: #1A845C;
+      --marine: #2A73D9;
+      --panel: #F2EFEC;
+      --display: "Source Serif 4", Georgia, serif;
+      --body: Roboto, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--body);
+      overflow: hidden;
+    }
+    button { font: inherit; }
+    .deck { height: 100%; position: relative; }
+    .slide {
+      display: none;
+      height: 100%; min-height: 0;
+      padding: clamp(26px, 5vw, 72px) clamp(24px, 7vw, 104px) 90px;
+      overflow: auto;
+      animation: arrive 360ms ease both;
+    }
+    .slide.active { display: flex; flex-direction: column; }
+    .slide::before {
+      content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background-image: radial-gradient(#000000 0.55px, transparent 0.55px);
+      background-size: 15px 15px; opacity: .08;
+      mask-image: linear-gradient(130deg, black, transparent 75%);
+    }
+    .topline {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; border-bottom: 1px solid var(--line); padding-bottom: 13px;
+      color: var(--muted); font-size: 12px; font-weight: 700;
+      letter-spacing: 0; text-transform: uppercase;
+    }
+    .topline .mark { color: var(--ink); display: flex; align-items: center; gap: 9px; }
+    .mark i { width: 11px; height: 11px; display: inline-block; background: var(--orange); border-radius: 50%; }
+    .eyebrow { margin: 0 0 12px; color: var(--orange); font-size: 12px; font-weight: 800; text-transform: uppercase; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { font-family: var(--display); font-weight: 700; letter-spacing: 0; }
+    h1 { max-width: 950px; margin: 28px 0 18px; font-size: clamp(46px, 8vw, 104px); line-height: .96; }
+    h2 { font-size: clamp(36px, 5vw, 62px); line-height: 1.02; margin: 8px 0 28px; }
+    h3 { font-size: 18px; line-height: 1.2; margin-bottom: 10px; }
+    p { line-height: 1.5; }
+    .lead { max-width: 680px; color: #333333; font-size: clamp(17px, 2vw, 23px); line-height: 1.45; }
+    .meta { margin-top: auto; padding-top: 24px; color: var(--muted); font-size: 13px; }
+    .cover { justify-content: center; position: relative; }
+    .cover .topline { position: absolute; inset: 0 0 auto; }
+    .cover h1 span { color: var(--orange); font-style: italic; }
+    .cover-art {
+      position: absolute; width: min(30vw, 370px); aspect-ratio: 1; right: 7%; bottom: 14%;
+      border: 1px solid var(--ink); border-radius: 50%; opacity: .9;
+    }
+    .cover-art::before, .cover-art::after {
+      content: ""; position: absolute; border: 1px solid var(--ink); border-radius: 50%;
+      inset: 15%; transform: rotate(38deg) scaleX(.56);
+    }
+    .cover-art::after { transform: rotate(-38deg) scaleX(.56); }
+    .cover-art i { position: absolute; width: 19%; aspect-ratio: 1; border-radius: 50%; background: var(--orange); top: 10%; left: 50%; transform: translateX(-50%); }
+    .cover-art b { position: absolute; width: 14%; aspect-ratio: 1; border-radius: 50%; background: var(--fern); bottom: 20%; left: 15%; }
+    .cover-art em { position: absolute; width: 11%; aspect-ratio: 1; border-radius: 50%; background: var(--marine); bottom: 23%; right: 19%; }
+    .status-line { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 30px; }
+    .status { display: inline-flex; gap: 8px; align-items: center; padding: 8px 11px; background: var(--orange); color: var(--ink); font-size: 12px; font-weight: 800; text-transform: uppercase; }
+    .status.proposed { background: transparent; border: 1px solid var(--orange); color: var(--ink); }
+    .grid { display: grid; gap: 16px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .tile { border-top: 3px solid var(--ink); padding: 17px 16px 8px 0; min-width: 0; }
+    .tile .number { display: block; font-family: var(--display); font-size: 38px; margin-bottom: 10px; }
+    .tile p, .tile li { color: #333333; font-size: 15px; }
+    .tile ul { margin: 8px 0; padding-left: 18px; }
+    .split { display: grid; grid-template-columns: .95fr 1.05fr; gap: 5vw; align-items: start; }
+    .callout { padding: 20px 22px; background: var(--ink); color: var(--paper); }
+    .callout strong { color: var(--orange); }
+    .callout p:last-child { margin-bottom: 0; }
+    .flow { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); grid-template-rows: repeat(3, minmax(104px, auto)); gap: 14px 28px; margin: 8px 0 24px; align-items: stretch; align-content: start; }
+    .flow-step { min-width: 0; min-height: 104px; background: var(--paper); border: 1px solid var(--line); border-top: 5px solid var(--orange); padding: 48px 14px 14px; position: relative; }
+    .flow-step:nth-child(1) { grid-column: 2; grid-row: 1; }
+    .flow-step:nth-child(2) { grid-column: 1; grid-row: 1 / span 3; max-height: 470px; overflow-x: hidden; overflow-y: auto; scrollbar-color: var(--orange) var(--panel); scrollbar-width: thin; }
+    .flow-step:nth-child(3) { grid-column: 2; grid-row: 2; }
+    .flow-step:nth-child(4) { grid-column: 2; grid-row: 3; }
+    .flow-number { position: absolute; top: 12px; left: 14px; width: 27px; height: 27px; display: grid !important; place-items: center; border-radius: 50%; background: var(--orange); color: var(--ink) !important; font-size: 11px !important; font-weight: 800; }
+    .flow-step::after { position: absolute; z-index: 1; width: 36px; height: 38px; display: grid; place-items: center; background: var(--orange); color: var(--ink); font-size: 25px; line-height: 1; font-weight: 800; }
+    .flow-step:nth-child(1)::after { content: "←"; left: -32px; top: 50%; transform: translateY(-50%); }
+    .flow-step:nth-child(2)::after { display: none; }
+    .flow-step:nth-child(3)::before { content: "→"; position: absolute; left: -32px; top: 50%; transform: translateY(-50%); z-index: 1; width: 36px; height: 38px; display: grid; place-items: center; background: var(--orange); color: var(--ink); font-size: 25px; line-height: 1; font-weight: 800; }
+    .flow-step:nth-child(3)::after { content: "↓"; left: 50%; bottom: -27px; transform: translateX(-50%); width: 38px; height: 32px; }
+    .flow-step b { display: block; margin-bottom: 7px; font-family: var(--display); font-size: 16px; }
+    .flow-description { color: var(--muted); font-size: 12px; line-height: 1.4; display: block; }
+    .host-contexts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
+    .host-context { min-width: 0; padding: 8px; background: var(--paper); border-bottom: 2px solid var(--line); }
+    .host-context:nth-child(1) { border-color: var(--orange); }
+    .host-context:nth-child(2) { border-color: var(--fern); }
+    .host-context:nth-child(3) { border-color: var(--marine); }
+    .host-mark { display: grid; place-items: center; width: 25px; height: 25px; margin-bottom: 6px; background: var(--ink); color: var(--paper); font-size: 9px; font-weight: 800; }
+    .host-context strong { display: block; font-size: 10px; line-height: 1.2; }
+    .record-caption { display: block; margin: 11px 0 5px; color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; }
+    .record-hint { margin: 4px 0 8px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+    .record-examples { display: grid; gap: 5px; margin-top: 11px; }
+    .record-item { min-width: 0; border: 1px solid var(--line); background: var(--paper); }
+    .record-item summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 8px; cursor: pointer; list-style: none; font-size: 11px; font-weight: 800; }
+    .record-item summary::-webkit-details-marker { display: none; }
+    .record-type { color: var(--orange); font-size: 9px; font-weight: 700; }
+    .record-item summary::after { content: "+"; flex: 0 0 20px; height: 20px; display: grid; place-items: center; background: var(--orange); color: var(--ink); font-size: 15px; }
+    .record-item[open] summary::after { content: "−"; background: var(--ink); color: var(--paper); }
+    .record-item summary:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+    .record-properties { padding: 8px; border-top: 1px solid var(--line); }
+    .property-table { display: grid; gap: 5px; margin: 0; }
+    .property-table > div { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1fr); gap: 10px; min-width: 0; align-items: baseline; }
+    .property-table dt { min-width: 0; margin: 0; color: var(--ink); font-size: 10px; font-weight: 700; overflow-wrap: anywhere; }
+    .property-table dd { min-width: 0; margin: 0; color: #333333; font-size: 10px; line-height: 1.35; overflow-wrap: anywhere; }
+    .record-reference-group { min-width: 0; }
+    .record-reference { margin: 8px 0 0; }
+    .record-reference-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 8px; border-top: 1px solid var(--line); }
+    .record-reference-group h4 { margin: 0 0 5px; color: var(--orange); font-size: 10px; text-transform: uppercase; }
+    .record-note { margin: 0; color: #333333; font-size: 10px; line-height: 1.4; }
+    .small-note { min-width: 0; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+    .split > * { min-width: 0; }
+    .guardrails { display: grid; grid-template-columns: 1fr 1fr; gap: 0 36px; }
+    .guardrail { border-top: 1px solid var(--line); padding: 13px 0 7px; display: grid; grid-template-columns: 28px 1fr; gap: 12px; }
+    .guardrail .symbol { font-size: 19px; color: var(--orange); font-weight: 800; }
+    .guardrail p { color: #333333; font-size: 14px; margin-bottom: 5px; }
+    .roadmap { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--ink); }
+    .route { padding: 20px 22px 10px 0; position: relative; }
+    .route:not(:last-child) { border-right: 1px solid var(--line); margin-right: 22px; }
+    .route .step { color: var(--orange); font-size: 12px; font-weight: 800; text-transform: uppercase; }
+    .route h3 { margin-top: 10px; }
+    .route p { color: #333333; font-size: 14px; }
+    .route .gate { padding-top: 10px; border-top: 2px solid var(--orange); font-size: 12px; font-weight: 700; }
+    .decision { display: flex; align-items: center; gap: 24px; margin-top: auto; padding-top: 26px; }
+    .decision .stamp { flex: 0 0 92px; height: 92px; display: grid; place-items: center; border-radius: 50%; background: var(--orange); color: var(--ink); font-family: var(--display); font-size: 21px; text-align: center; line-height: 1; }
+    .decision p { max-width: 680px; font-family: var(--display); font-size: clamp(23px, 3.2vw, 38px); line-height: 1.15; margin: 0; }
+    .controls {
+      position: fixed; right: 22px; bottom: 18px; display: flex; align-items: center; gap: 8px;
+      padding: 7px; background: var(--paper); border: 1px solid var(--line); z-index: 5;
+    }
+    .controls button { width: 38px; height: 38px; border: 0; background: var(--ink); color: var(--paper); cursor: pointer; font-size: 18px; }
+    .controls button:disabled { opacity: .35; cursor: default; }
+    .counter { min-width: 52px; text-align: center; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+    .progress { position: fixed; inset: auto auto 0 0; height: 4px; background: var(--orange); width: 0; z-index: 6; transition: width 180ms ease; }
+    @keyframes arrive { from { opacity: .35; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @media (min-width: 761px) {
+      .slide[aria-label="Telemetry flow"] { padding-top: 42px; padding-bottom: 60px; }
+      .slide[aria-label="Telemetry flow"] h2 { font-size: clamp(38px, 4.4vw, 54px); margin-bottom: 16px; }
+      .slide[aria-label="Telemetry flow"] .flow { margin-bottom: 12px; }
+    }
+    @media (max-width: 760px) {
+      .slide { padding: 25px 22px 82px; }
+      .cover-art { width: 150px; right: 8%; bottom: 12%; opacity: .48; }
+      .grid.three, .grid.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid.two, .split, .guardrails { grid-template-columns: 1fr; }
+      .flow { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; gap: 24px; }
+      .flow-step { min-height: 0; padding: 18px 48px 16px 14px; }
+      .flow-step:nth-child(n) { grid-column: 1; grid-row: auto; max-height: none; overflow: visible; }
+      .flow-number { top: 14px; left: auto; right: 14px; }
+      .flow-step:nth-child(1)::after, .flow-step:nth-child(2)::after, .flow-step:nth-child(3)::after { content: "↓"; left: 50%; right: auto; top: auto; bottom: -30px; transform: translateX(-50%); width: 38px; height: 34px; display: grid; font-size: 23px; }
+      .flow-step:nth-child(3)::before { display: none; }
+      .flow-step:nth-child(4)::after { display: none; }
+      .host-contexts { max-width: 340px; }
+      .property-table > div { grid-template-columns: minmax(86px, .65fr) minmax(0, 1fr); gap: 8px; }
+      .record-reference-content { grid-template-columns: 1fr; gap: 10px; }
+      .roadmap { grid-template-columns: 1fr; }
+      .route, .route:not(:last-child) { border-right: 0; border-bottom: 1px solid var(--line); margin: 0; padding: 14px 0; }
+      .route:last-child { border-bottom: 0; }
+    }
+    @media print {
+      @page { size: 13.333in 7.5in; margin: 0; }
+      html, body { width: auto; height: auto; overflow: visible; background: white; print-color-adjust: exact; }
+      .deck { height: auto; }
+      .slide, .slide.active { display: flex !important; height: 7.5in; page-break-after: always; overflow: hidden; padding: .48in .8in .65in; animation: none; }
+      .flow-step:nth-child(2) { max-height: none; overflow: visible; }
+      .slide::before { position: absolute; }
+      .controls, .progress { display: none !important; }
+      h1 { font-size: 66pt; } h2 { font-size: 40pt; }
+      .cover-art { width: 2.8in; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <main class="deck" aria-label="Dynamo Governance telemetry presentation">
+    <section class="slide cover active" aria-label="Title">
+      <div class="topline"><span class="mark"><i></i> Dynamo Governance</span><span>Project update / October 2026</span></div>
+      <p class="eyebrow">A local-first telemetry prototype</p>
+      <h1>What we know.<br><span>What comes next.</span></h1>
+      <p class="lead">Current project state, telemetry boundaries, and practical routes toward governed insight.</p>
+      <div class="status-line"><span class="status">Dynamo prototype implemented</span><span class="status proposed">Central collection not approved</span></div>
+      <div class="cover-art" aria-hidden="true"><i></i><b></b><em></em></div>
+      <p class="meta">Dynamo Governance · Internal working discussion</p>
+    </section>
+
+    <section class="slide" aria-label="Project at a glance">
+      <div class="topline"><span class="mark"><i></i> 01 / Project state</span><span>Three connected pieces</span></div>
+      <p class="eyebrow">Useful foundation, deliberately modest footprint</p>
+      <h2>One package.<br>Three surfaces.</h2>
+      <div class="grid three">
+        <article class="tile"><span class="number">01</span><h3>Telemetry extension</h3><p>Observes Dynamo sessions, home-graph lifecycle, and completed evaluations. Captures graph-scoped package use.</p></article>
+        <article class="tile"><span class="number">02</span><h3>Resource sidebar</h3><p>Provides a Dynamo entry point to approved design automation resources and training links.</p></article>
+        <article class="tile"><span class="number">03</span><h3>Telemetry core</h3><p>Defines typed event records and writes telemetry to local JSONL logs.</p></article>
+      </div>
+      <p class="meta">Current binaries target Dynamo 3.x and .NET 8. Grasshopper is not implemented.</p>
+    </section>
+
+    <section class="slide" aria-label="Telemetry flow">
+      <div class="topline"><span class="mark"><i></i> 02 / Telemetry today</span><span>Observed, queued, written locally</span></div>
+      <p class="eyebrow">Implemented Dynamo path</p>
+      <h2>From host event<br>to local record.</h2>
+      <div class="flow" role="list" aria-label="Telemetry processing flow">
+        <div class="flow-step" role="listitem"><span class="flow-number" aria-hidden="true">01</span><b>Dynamo host</b><span class="flow-description">Extension observes session, graph lifecycle and evaluation events.</span><div class="host-contexts" aria-label="Dynamo host contexts"><div class="host-context"><span class="host-mark" aria-hidden="true">R</span><strong>Revit</strong></div><div class="host-context"><span class="host-mark" aria-hidden="true">D</span><strong>Dynamo Sandbox</strong></div><div class="host-context"><span class="host-mark" aria-hidden="true">C3D</span><strong>Civil 3D</strong></div></div></div>
+        <div class="flow-step" role="listitem"><span class="flow-number" aria-hidden="true">02</span><b>Typed records</b><span class="flow-description">Every record shares an event name, session ID and UTC time.</span><span class="record-caption">Shared record fields</span><dl class="property-table"><div><dt>event</dt><dd>Which event occurred</dd></div><div><dt>session_id</dt><dd>Session this record belongs to</dd></div><div><dt>occurred_utc</dt><dd>Event time in UTC</dd></div></dl><span class="record-caption">Event-specific details</span><p class="record-hint">The <strong>data</strong> field holds details for that event; session ended has no event-specific data.</p><details class="record-item record-reference"><summary><span>Reusable property groups</span><span class="record-type">4 groups</span></summary><div class="record-reference-content"><section class="record-reference-group"><h4>Identity</h4><dl class="property-table"><div><dt>user_id</dt><dd>User identifier</dd></div><div><dt>user_id_source</dt><dd>Identifier source</dd></div><div><dt>machine_id</dt><dd>Machine identifier</dd></div><div><dt>machine_id_source</dt><dd>Identifier source</dd></div><div><dt>machine_id_collected</dt><dd>Whether collected</dd></div></dl></section><section class="record-reference-group"><h4>Application</h4><dl class="property-table"><div><dt>host_name</dt><dd>Host process</dd></div><div><dt>host_version</dt><dd>Host version</dd></div><div><dt>dynamo_version</dt><dd>Dynamo version</dd></div><div><dt>extension_version</dt><dd>Extension version</dd></div><div><dt>process_id</dt><dd>Process identifier</dd></div><div><dt>process_architecture</dt><dd>Process architecture</dd></div><div><dt>runtime_version</dt><dd>.NET runtime</dd></div></dl></section><section class="record-reference-group"><h4>Graph</h4><dl class="property-table"><div><dt>graph_id</dt><dd>Graph identifier</dd></div><div><dt>name</dt><dd>Graph name</dd></div><div><dt>file_path</dt><dd>Graph path, when available</dd></div><div><dt>file_size_bytes</dt><dd>Graph file size</dd></div><div><dt>node_count</dt><dd>Node total</dd></div><div><dt>packages</dt><dd>Package references</dd></div></dl></section><section class="record-reference-group"><h4>Package</h4><dl class="property-table"><div><dt>name</dt><dd>Package name</dd></div><div><dt>version</dt><dd>Package version</dd></div><div><dt>node_count</dt><dd>Package node total</dd></div><div><dt>description</dt><dd>Package description</dd></div><div><dt>license</dt><dd>License</dd></div><div><dt>repository_url</dt><dd>Repository link</dd></div><div><dt>site_url</dt><dd>Package site</dd></div></dl></section></div></details><div class="record-examples">
+          <details class="record-item"><summary><span>Session started</span><span class="record-type">session.started</span></summary><div class="record-properties"><dl class="property-table"><div><dt>identity</dt><dd>Identity group</dd></div><div><dt>application</dt><dd>Application group</dd></div></dl></div></details>
+          <details class="record-item"><summary><span>Session ended</span><span class="record-type">session.ended</span></summary><div class="record-properties"><p class="record-note">No event-specific details. This record contains only the shared fields above.</p></div></details>
+          <details class="record-item"><summary><span>Graph opened</span><span class="record-type">graph.opened</span></summary><div class="record-properties"><dl class="property-table"><div><dt>Graph</dt><dd>Graph property group</dd></div></dl></div></details>
+          <details class="record-item"><summary><span>Graph closed</span><span class="record-type">graph.closed</span></summary><div class="record-properties"><dl class="property-table"><div><dt>Graph</dt><dd>Graph property group</dd></div></dl></div></details>
+          <details class="record-item"><summary><span>Graph saved</span><span class="record-type">graph.saved</span></summary><div class="record-properties"><dl class="property-table"><div><dt>Graph</dt><dd>Graph property group</dd></div></dl></div></details>
+          <details class="record-item"><summary><span>Execution started</span><span class="record-type">execution.started</span></summary><div class="record-properties"><dl class="property-table"><div><dt>execution_id</dt><dd>Execution identifier</dd></div><div><dt>graph_id</dt><dd>Graph identifier</dd></div></dl></div></details>
+          <details class="record-item"><summary><span>Execution ended</span><span class="record-type">execution.ended</span></summary><div class="record-properties"><dl class="property-table"><div><dt>execution_id</dt><dd>Execution identifier</dd></div><div><dt>graph</dt><dd>Graph property group</dd></div><div><dt>evaluation_took_place</dt><dd>Whether evaluation ran</dd></div><div><dt>successful</dt><dd>Evaluation outcome</dd></div></dl></div></details>
+        </div></div>
+        <div class="flow-step" role="listitem"><span class="flow-number" aria-hidden="true">03</span><b>Bounded queue</b><span class="flow-description">Up to 1,024 records; event producers never block Dynamo.</span></div>
+        <div class="flow-step" role="listitem"><span class="flow-number" aria-hidden="true">04</span><b>Daily JSONL</b><span class="flow-description">Background writer appends records to the user's local application data.</span></div>
+      </div>
+      <div class="split">
+        <div class="callout"><h3>Best effort by design</h3><p>Telemetry failures are isolated from the host. A full queue or write failure can drop records; shutdown allows a short, <strong>200 ms</strong> drain window.</p></div>
+        <p class="small-note"><strong>Log location</strong><br>%LOCALAPPDATA%\DynamoGovernance\Logs\telemetry_yyyy-MM-dd.jsonl<br><br>The current envelope does not include a schema version or event ID.</p>
+      </div>
+    </section>
+
+    <section class="slide" aria-label="Signals and exclusions">
+      <div class="topline"><span class="mark"><i></i> 03 / Data boundaries</span><span>Metadata, not design content</span></div>
+      <p class="eyebrow">What the prototype can tell us</p>
+      <h2>Operational signals.<br>Not the design itself.</h2>
+      <div class="grid two">
+        <article class="tile"><h3>Captured today</h3><ul><li>Session and host / Dynamo / extension versions</li><li>Graph opened, saved and closed</li><li>Graph name, ID, path when available and file size</li><li>Node count and graph-scoped package metadata</li><li>Evaluation start/end correlation and success</li></ul></article>
+        <article class="tile"><h3>Explicitly not captured</h3><ul><li>Node input/output values or component-level identities</li><li>Geometry, model content, previews or screenshots</li><li>Graph file contents or embedded scripts</li><li>Exception text, stack traces or failing inputs</li><li>Machine-wide inventory of installed packages</li></ul></article>
+      </div>
+      <div class="status-line"><span class="status proposed">Current logs contain raw Windows user + machine IDs</span><span class="status proposed">Graph paths and names may be sensitive</span></div>
+      <p class="meta">Local storage is not the same as anonymous: session IDs link activity to the session-start identity record.</p>
+    </section>
+
+    <section class="slide" aria-label="Risks and decisions">
+      <div class="topline"><span class="mark"><i></i> 04 / Governance gate</span><span>Resolve before production or centralization</span></div>
+      <p class="eyebrow">The next work is partly technical, partly policy</p>
+      <h2>Agree the rules<br>before widening collection.</h2>
+      <div class="guardrails">
+        <div class="guardrail"><span class="symbol">01</span><div><h3>Identity</h3><p>Approve raw identifiers, pseudonymize them, or remove them. Decide whether user-level reporting is necessary.</p></div></div>
+        <div class="guardrail"><span class="symbol">02</span><div><h3>Document metadata</h3><p>Choose whether paths and names are retained, minimized, tokenized, or excluded.</p></div></div>
+        <div class="guardrail"><span class="symbol">03</span><div><h3>Dependencies</h3><p>Set the minimum useful package fields; internal names and repository URLs can reveal organizational details.</p></div></div>
+        <div class="guardrail"><span class="symbol">04</span><div><h3>Lifecycle controls</h3><p>Set retention, local file access, deletion, user notice and audit expectations.</p></div></div>
+        <div class="guardrail"><span class="symbol">05</span><div><h3>Central service</h3><p>Only consider transport after access, encryption, region, incident response and ownership are agreed.</p></div></div>
+        <div class="guardrail"><span class="symbol">06</span><div><h3>Shared contract</h3><p>Approve event names, schema versioning and cross-tool compatibility before adding another source.</p></div></div>
+      </div>
+      <p class="meta">Risk review material is prepared; collection decisions remain open in project documentation.</p>
+    </section>
+
+    <section class="slide" aria-label="Future routes">
+      <div class="topline"><span class="mark"><i></i> 05 / Future routes</span><span>Sequence is a proposal, not a commitment</span></div>
+      <p class="eyebrow">Three routes, ordered by dependency</p>
+      <h2>Make the local path<br>trustworthy first.</h2>
+      <div class="roadmap">
+        <article class="route"><span class="step">Route A · Foundation</span><h3>Harden the prototype</h3><p>Decide field minimization, surface dropped-record diagnostics, define retention and access expectations, and add an explicit schema version before contract expansion.</p><p class="gate">Gate: Security / Privacy / Risk field approval</p></article>
+        <article class="route"><span class="step">Route B · Broaden tools</span><h3>Validate Grasshopper</h3><p>Map document lifecycle and dependency metadata against the Rhino API. Prove what is technically available and safe before implementing a second collector.</p><p class="gate">Gate: shared schema + API feasibility</p></article>
+        <article class="route"><span class="step">Route C · Central insight</span><h3>Evaluate secure transport</h3><p>Design an opt-in or governed ingestion path, role-based reporting, encryption, region, retention and deletion controls, while preserving local-only use as an independent option.</p><p class="gate">Gate: separate architecture and risk approval</p></article>
+      </div>
+      <div class="decision"><div class="stamp">First<br>decision</div><p>What is the minimum data set that answers adoption and compatibility questions without identifying people or exposing project context?</p></div>
+    </section>
+
+    <section class="slide" aria-label="Discussion">
+      <div class="topline"><span class="mark"><i></i> 06 / Discussion</span><span>Suggested decisions for this review</span></div>
+      <p class="eyebrow">Turn the prototype into a governed capability</p>
+      <h2>Choose the boundary.<br>Then choose the route.</h2>
+      <div class="grid four">
+        <article class="tile"><span class="number">A</span><h3>Identity</h3><p>Raw, pseudonymous, or absent?</p></article>
+        <article class="tile"><span class="number">B</span><h3>Document fields</h3><p>Keep, minimize, or omit names and paths?</p></article>
+        <article class="tile"><span class="number">C</span><h3>First investment</h3><p>Local reliability, Grasshopper mapping, or reporting?</p></article>
+        <article class="tile"><span class="number">D</span><h3>Approval owners</h3><p>Who sets retention, access, and release gates?</p></article>
+      </div>
+      <div class="callout" style="margin-top:24px"><p><strong>Current position:</strong> useful Dynamo prototype; local-only data flow; sensitive fields present; production policy and centralized collection still need explicit decisions.</p></div>
+      <p class="meta">Source of truth: repository README, Architecture and Telemetry Schema, Telemetry Risk Review Package, and current Core / Extension implementation.</p>
+    </section>
+  </main>
+  <nav class="controls" aria-label="Slide controls">
+    <button id="previous" type="button" aria-label="Previous slide" title="Previous slide">&#8592;</button>
+    <span class="counter" id="counter" aria-live="polite">01 / 07</span>
+    <button id="next" type="button" aria-label="Next slide" title="Next slide">&#8594;</button>
+    <button id="print" type="button" aria-label="Print or export slides to PDF" title="Print / export PDF">&#9113;</button>
+  </nav>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+  <script>
+    (() => {
+      const slides = [...document.querySelectorAll('.slide')];
+      const counter = document.getElementById('counter');
+      const progress = document.getElementById('progress');
+      const previous = document.getElementById('previous');
+      const next = document.getElementById('next');
+      let current = 0;
+
+      function show(index) {
+        current = Math.max(0, Math.min(slides.length - 1, index));
+        slides.forEach((slide, i) => {
+          slide.classList.toggle('active', i === current);
+          slide.setAttribute('aria-hidden', String(i !== current));
+        });
+        counter.textContent = `${String(current + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+        progress.style.width = `${((current + 1) / slides.length) * 100}%`;
+        previous.disabled = current === 0;
+        next.disabled = current === slides.length - 1;
+        history.replaceState(null, '', `#${current + 1}`);
+      }
+
+      previous.addEventListener('click', () => show(current - 1));
+      next.addEventListener('click', () => show(current + 1));
+      document.getElementById('print').addEventListener('click', () => window.print());
+      document.addEventListener('keydown', event => {
+        if (['ArrowRight', 'PageDown', ' '].includes(event.key)) { event.preventDefault(); show(current + 1); }
+        if (['ArrowLeft', 'PageUp'].includes(event.key)) { event.preventDefault(); show(current - 1); }
+        if (event.key === 'Home') show(0);
+        if (event.key === 'End') show(slides.length - 1);
+      });
+      const requested = Number(location.hash.slice(1));
+      show(Number.isInteger(requested) && requested > 0 ? requested - 1 : 0);
+    })();
+  </script>
+</body>
+</html>

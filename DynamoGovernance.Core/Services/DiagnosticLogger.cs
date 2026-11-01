@@ -1,13 +1,37 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text;
+using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 
 namespace DynamoGovernance.Core.Services
 {
     public class DiagnosticLogger
     {
-        private static readonly object WriteLock = new();
+        private static readonly Lazy<Logger> SharedLogger = new(CreateLogger);
         private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+
+        private static Logger CreateLogger()
+        {
+            string logDirectory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "DynamoGovernance",
+                "Diagnostics");
+
+            Directory.CreateDirectory(logDirectory);
+
+            string logFilePathTemplate = Path.Combine(logDirectory, "diagnostics_.jsonl");
+
+            return new LoggerConfiguration()
+                .MinimumLevel.Information()
+                .WriteTo.Async(sinkConfiguration => sinkConfiguration.File(
+                    logFilePathTemplate,
+                    rollingInterval: RollingInterval.Day,
+                    outputTemplate: "{Message:lj}{NewLine}"),
+                    blockWhenFull: false)
+                .CreateLogger();
+        }
+
         private void WriteRecord(
             string level,
             string component,
@@ -26,15 +50,10 @@ namespace DynamoGovernance.Core.Services
                     Component = component,
                     Operation = operation,
                 };
-                string logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DynamoGovernance", "Diagnostics");
-                string logFilePath = Path.Combine(logDirectory, $"diagnostics_{DateTime.UtcNow:yyyy-MM-dd}.jsonl");
+
                 string json = JsonSerializer.Serialize(record, _jsonOptions);
-                lock (WriteLock)
-                {
-                    Directory.CreateDirectory(logDirectory);
-                    File.AppendAllText(
-                        logFilePath, json + Environment.NewLine, Encoding.UTF8);
-                }
+                LogEventLevel logEventLevel = level == "error" ? LogEventLevel.Error : LogEventLevel.Information;
+                SharedLogger.Value.Write(logEventLevel, json);
             }
             catch
             {

@@ -7,6 +7,9 @@ public class TelemetryRecord
     [JsonPropertyName("event")]
     public required string Event { get; init; }
 
+    [JsonPropertyName("id")]
+    public Guid Id { get; init; } = Guid.NewGuid();
+
     [JsonPropertyName("session_id")]
     public required Guid SessionId { get; init; }
 

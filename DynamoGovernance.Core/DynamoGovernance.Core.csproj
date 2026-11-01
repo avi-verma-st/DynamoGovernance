@@ -5,12 +5,26 @@
     <Version>2.0.0</Version>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <!-- Post-build event to copy DLL to Dynamo dev packages -->
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy /Y /I &quot;$(TargetPath)&quot; &quot;C:\DynamoDev\packages\DynamoGovernance\bin\&quot;" ContinueOnError="true" />
-    <Exec Command="xcopy /Y /I &quot;$(TargetDir)$(TargetName).pdb&quot; &quot;C:\DynamoDev\packages\DynamoGovernance\bin\&quot;" ContinueOnError="true" />
+    <ItemGroup>
+      <DynamoPackageBinFiles Include="$(TargetDir)*.dll" />
+      <DynamoPackageBinFiles Include="$(TargetDir)*.pdb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DynamoPackageBinFiles)" DestinationFolder="C:\DynamoDev\packages\DynamoGovernance\bin\" ContinueOnError="true" />
+    <!-- Copy local .env (if present) so TelemetryLoggerOptions can pick up
+         DYNAMOGOVERNANCE_TELEMETRY_* values at runtime without requiring real
+         OS environment variables. Never commit a populated .env to source control. -->
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\.env" DestinationFolder="C:\DynamoDev\packages\DynamoGovernance\bin\" ContinueOnError="true" Condition="Exists('$(MSBuildProjectDirectory)\..\.env')" />
   </Target>
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="4.4.0" />
+    <PackageReference Include="Serilog.Sinks.Async" Version="2.1.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Serilog.Sinks.Http" Version="9.2.1" />
+  </ItemGroup>
 
 </Project>
